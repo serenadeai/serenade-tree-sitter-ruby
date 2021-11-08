@@ -3,10 +3,7 @@
   "version": "0.19.0",
   "description": "Ruby grammar for tree-sitter",
   "main": "bindings/node",
-  "keywords": [
-    "parser",
-    "lexer"
-  ],
+  "keywords": ["parser", "lexer"],
   "author": "Rob Rix",
   "license": "MIT",
   "dependencies": {
@@ -21,6 +18,7 @@
     "install": "prebuild-install || node-gyp rebuild",
     "prebuild": "prebuild -r electron -t 3.0.0 -t 4.0.0 -t 4.0.4 -t 5.0.0 --strip && prebuild -t 8.16.0 -t 10.12.0 --strip",
     "prebuild:upload": "prebuild --upload-all",
+    "build": "tree-sitter generate",
     "test": "tree-sitter test && script/parse-examples",
     "test-windows": "tree-sitter test"
   },
@@ -28,10 +26,15 @@
   "tree-sitter": [
     {
       "scope": "source.ruby",
-      "file-types": [
-        "rb"
-      ],
+      "file-types": ["rb"],
       "injection-regex": "ruby"
     }
-  ]
+  ],
+  "prettier": {
+    "trailingComma": "es5",
+    "tabWidth": 2,
+    "semi": false,
+    "arrowParens": "avoid",
+    "singleQuote": true
+  }
 }

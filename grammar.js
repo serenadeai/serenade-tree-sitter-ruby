@@ -25,11 +25,11 @@ const PREC = {
   UNARY_MINUS: 75,
   EXPONENTIAL: 80,
   COMPLEMENT: 85,
-};
+}
 
-const IDENTIFIER_CHARS = /[^\x00-\x1F\s:;`"'@$#.,|^&<=>+\-*/\\%?!~()\[\]{}]*/;
-const LOWER_ALPHA_CHAR = /[^\x00-\x1F\sA-Z0-9:;`"'@$#.,|^&<=>+\-*/\\%?!~()\[\]{}]/;
-const ALPHA_CHAR = /[^\x00-\x1F\s0-9:;`"'@$#.,|^&<=>+\-*/\\%?!~()\[\]{}]/;
+const IDENTIFIER_CHARS = /[^\x00-\x1F\s:;`"'@$#.,|^&<=>+\-*/\\%?!~()\[\]{}]*/
+const LOWER_ALPHA_CHAR = /[^\x00-\x1F\sA-Z0-9:;`"'@$#.,|^&<=>+\-*/\\%?!~()\[\]{}]/
+const ALPHA_CHAR = /[^\x00-\x1F\s0-9:;`"'@$#.,|^&<=>+\-*/\\%?!~()\[\]{}]/
 
 module.exports = grammar({
   name: 'ruby',
@@ -66,323 +66,329 @@ module.exports = grammar({
     $._element_reference_bracket,
   ],
 
-  extras: $ => [
-    $.comment,
-    $.heredoc_body,
-    /\s|\\\n/
-  ],
+  extras: $ => [$.comment, $.heredoc_body, /\s|\\\n/],
 
   word: $ => $.identifier,
 
-  supertypes: $ => [
-    $._statement,
-    $._arg,
-    $._method_name,
-    $._variable,
-    $._primary,
-    $._lhs,
+  conflicts: $ => [
+    [$.unless, $.terminator],
+    [$.when, $.terminator],
+    [$.expression_, $.pair],
+    [$.expression_, $._chained_command_call],
+    [$.command_argument_list, $.argument_list],
+    [$.primary, $.chained_string],
+    [$.chained_string],
+    [$._chained_command_call, $._variable],
   ],
 
+  supertypes: $ => [$._method_name, $._variable],
+
   rules: {
-    program: $ => seq(
-      optional($._statements),
-      optional(seq(
-        '__END__',
-        $._line_break,
-        $.uninterpreted)
-      )
-    ),
+    source_file: $ =>
+      seq(
+        optional_with_placeholder('statement_list', $.statement_list),
+        optional(seq('__END__', $._line_break, $.uninterpreted))
+      ),
 
     uninterpreted: $ => /(.|\s)*/,
 
-    _statements: $ => choice(
-      seq(
-        repeat1(choice(
-          seq($._statement, $._terminator),
-          $.empty_statement
-        )),
-        optional($._statement)
+    statements: $ =>
+      choice(
+        seq(
+          repeat1(choice(seq($.statement_, $._terminator), $.empty_statement)),
+          optional($.statement_)
+        ),
+        $.statement_
       ),
-      $._statement
-    ),
 
-    begin_block: $ => seq("BEGIN", "{", optional($._statements), "}"),
-    end_block: $ => seq("END", "{", optional($._statements), "}"),
+    begin_block: $ => seq('BEGIN', '{', optional($.statements), '}'),
+    end_block: $ => seq('END', '{', optional($.statements), '}'),
 
-    _statement: $ => choice(
-      $.undef,
-      $.alias,
-      $.if_modifier,
-      $.unless_modifier,
-      $.while_modifier,
-      $.until_modifier,
-      $.rescue_modifier,
-      $.begin_block,
-      $.end_block,
-      $._expression
-    ),
+    statement_: $ =>
+      choice(
+        $.undef,
+        $.alias,
+        $.if_modifier,
+        $.unless_modifier,
+        $.while_modifier,
+        $.until_modifier,
+        $.rescue_modifier,
+        $.begin_block,
+        $.end_block,
+        $.expression_
+      ),
 
-    method: $ => seq('def', $._method_rest),
+    method: $ => seq('def', $.method_rest),
 
-    singleton_method: $ => seq(
-      'def',
+    singleton_method: $ =>
       seq(
+        'def',
+        seq(
+          choice(field('object', $._variable), seq('(', field('object', $.arg), ')')),
+          choice('.', '::')
+        ),
+        $.method_rest
+      ),
+
+    method_rest: $ =>
+      seq(
+        alias($._method_name, $.identifier),
         choice(
-          field('object', $._variable),
-          seq('(', field('object', $._arg), ')')
-        ),
-        choice('.', '::')
-      ),
-      $._method_rest
-    ),
-
-    _method_rest: $ => seq(
-      field('name', $._method_name),
-      choice(
-        seq(
-          field('parameters', alias($.parameters, $.method_parameters)),
-          optional($._terminator)
-        ),
-        seq(
-          optional(
-            field('parameters', alias($.bare_parameters, $.method_parameters))
+          prec.dynamic(
+            1,
+            seq(alias($.parameter_list_block, $.parameter_list_optional), optional($.terminator))
           ),
-          $._terminator
+          $.bare_parameters_with_terminator
         ),
+        $.body_statement
       ),
-      $._body_statement
-    ),
 
-    parameters: $ => seq(
-      '(',
-      commaSep($._formal_parameter),
-      ')'
-    ),
+    parameter_list_block: $ =>
+      seq('(', optional_with_placeholder('parameter_list', commaSep($.parameter)), ')'),
 
-    bare_parameters: $ => seq(
-      $._simple_formal_parameter,
-      repeat(seq(',', $._formal_parameter))
-    ),
+    bare_parameters_with_terminator: $ =>
+      seq(optional_with_placeholder('parameter_list_optional', $.bare_parameters), $.terminator),
 
-    block_parameters: $ => seq(
-      '|',
-      seq(commaSep($._formal_parameter), optional(',')),
-      optional(seq(';', sep1($.identifier, ','))), // Block shadow args e.g. {|; a, b| ...}
-      '|'
-    ),
+    bare_parameters: $ => seq($._simple_formal_parameter, repeat(seq(',', $.parameter))),
 
-    _formal_parameter: $ => choice(
-      $._simple_formal_parameter,
-      alias($.parameters, $.destructured_parameter)
-    ),
+    block_parameters: $ =>
+      seq(
+        '|',
+        seq(commaSep($.parameter), optional(',')),
+        optional(seq(';', sep1($.identifier, ','))), // Block shadow args e.g. {|; a, b| ...}
+        '|'
+      ),
 
-    _simple_formal_parameter: $ => choice(
-      $.identifier,
-      $.splat_parameter,
-      $.hash_splat_parameter,
-      $.block_parameter,
-      $.keyword_parameter,
-      $.optional_parameter
-    ),
+    parameter: $ =>
+      choice($._simple_formal_parameter, alias($.parameter_list_block, $.destructured_parameter)),
 
-    splat_parameter: $ => seq(
-      '*',
-      field('name', optional($.identifier))
-    ),
-    hash_splat_parameter: $ => seq(
-      '**',
-      field('name', optional($.identifier))
-    ),
-    block_parameter: $ => seq(
-      '&',
-      field('name', $.identifier)
-    ),
-    keyword_parameter: $ => prec.right(PREC.BITWISE_OR + 1, seq(
-      field('name', $.identifier),
-      token.immediate(':'),
-      field('value', optional($._arg))
-    )),
-    optional_parameter: $ => prec(PREC.BITWISE_OR + 1, seq(
-      field('name', $.identifier),
-      '=',
-      field('value', $._arg)
-    )),
-
-    class: $ => seq(
-      'class',
-      field('name', choice($.constant, $.scope_resolution)),
-      field('superclass', optional($.superclass)),
-      $._terminator,
-      $._body_statement
-    ),
-
-    superclass: $ => seq('<', $._expression),
-
-    singleton_class: $ => seq(
-      'class',
-      alias($._singleton_class_left_angle_left_langle, '<<'),
-      field('value', $._arg),
-      $._terminator,
-      $._body_statement
-    ),
-
-    module: $ => seq(
-      'module',
-      field('name', choice($.constant, $.scope_resolution)),
+    _simple_formal_parameter: $ =>
       choice(
-        seq($._terminator, $._body_statement),
-        'end'
-      )
-    ),
+        $.identifier,
+        $.splat_parameter,
+        $.hash_splat_parameter,
+        $.block_parameter,
+        $.keyword_parameter,
+        $.optional_parameter
+      ),
+
+    splat_parameter: $ => seq('*', field('name', optional($.identifier))),
+    hash_splat_parameter: $ => seq('**', field('name', optional($.identifier))),
+    block_parameter: $ => seq('&', field('name', $.identifier)),
+    keyword_parameter: $ =>
+      prec.right(
+        PREC.BITWISE_OR + 1,
+        seq(field('name', $.identifier), token.immediate(':'), field('value', optional($.arg)))
+      ),
+    optional_parameter: $ =>
+      prec(PREC.BITWISE_OR + 1, seq(field('name', $.identifier), '=', field('value', $.arg))),
+
+    class: $ =>
+      seq(
+        'class',
+        field('identifier', choice($.constant, $.scope_resolution)),
+        optional_with_placeholder('extends_optional', $.extends_optional),
+        $.terminator,
+        alias($.class_body_statement, $.body_statement)
+      ),
+
+    extends_optional: $ => seq('<', alias($.expression_, $.extends_type)),
+
+    singleton_class: $ =>
+      seq(
+        'class',
+        alias($._singleton_class_left_angle_left_langle, '<<'),
+        field('value', $.arg),
+        $._terminator,
+        $.body_statement
+      ),
+
+    module: $ =>
+      seq(
+        'module',
+        field('name', choice($.constant, $.scope_resolution)),
+        choice(seq($._terminator, $.body_statement), 'end')
+      ),
 
     return_command: $ => prec.left(seq('return', alias($.command_argument_list, $.argument_list))),
     yield_command: $ => prec.left(seq('yield', alias($.command_argument_list, $.argument_list))),
     break_command: $ => prec.left(seq('break', alias($.command_argument_list, $.argument_list))),
     next_command: $ => prec.left(seq('next', alias($.command_argument_list, $.argument_list))),
-    return: $ => prec.left(seq('return', optional($.argument_list))),
+    return: $ =>
+      prec.left(
+        seq(
+          'return',
+          optional_with_placeholder('return_value_optional', alias($.argument_list, $.return_value))
+        )
+      ),
     yield: $ => prec.left(seq('yield', optional($.argument_list))),
     break: $ => prec.left(seq('break', optional($.argument_list))),
     next: $ => prec.left(seq('next', optional($.argument_list))),
     redo: $ => prec.left(seq('redo', optional($.argument_list))),
     retry: $ => prec.left(seq('retry', optional($.argument_list))),
 
-    if_modifier: $ => prec(PREC.RESCUE, seq(
-      field('body', $._statement),
-      'if',
-      field('condition', $._expression)
-    )),
+    if_modifier: $ =>
+      prec(PREC.RESCUE, seq(field('body', $.statement_), 'if', field('condition', $.expression_))),
 
-    unless_modifier: $ => prec(PREC.RESCUE, seq(
-      field('body', $._statement),
-      'unless',
-      field('condition', $._expression)
-    )),
-
-    while_modifier: $ => prec(PREC.RESCUE, seq(
-      field('body', $._statement),
-      'while',
-      field('condition', $._expression)
-    )),
-
-    until_modifier: $ => prec(PREC.RESCUE, seq(
-      field('body', $._statement),
-      'until',
-      field('condition', $._expression)
-    )),
-
-    rescue_modifier: $ => prec(PREC.RESCUE, seq(
-      field('body', $._statement),
-      'rescue',
-      field('handler', $._expression)
-    )),
-
-    while: $ => seq(
-      'while',
-      field('condition', $._statement),
-      field('body', $.do)
-    ),
-
-    until: $ => seq(
-      'until',
-      field('condition', $._statement),
-      field('body', $.do)
-    ),
-
-    for: $ => seq(
-      'for',
-      field('pattern', choice($._lhs, $.left_assignment_list)),
-      field('value', $.in),
-      field('body', $.do)
-    ),
-
-    in: $ => seq('in', $._arg),
-    do: $ => seq(
-      choice('do', $._terminator),
-      optional($._statements),
-      'end'
-    ),
-
-    case: $ => seq(
-      'case',
-      field('value', optional($._statement)),
-      optional($._terminator),
-      repeat($.when),
-      optional($.else),
-      'end'
-    ),
-
-    when: $ => seq(
-      'when',
-      commaSep1(field('pattern', $.pattern)),
-      choice($._terminator, field('body', $.then))
-    ),
-
-    pattern: $ => choice($._arg, $.splat_argument),
-
-    if: $ => seq(
-      'if',
-      field('condition', $._statement),
-      choice($._terminator, field('consequence', $.then)),
-      field('alternative', optional(choice($.else, $.elsif))),
-      'end'
-    ),
-
-    unless: $ => seq(
-      'unless',
-      field('condition', $._statement),
-      choice($._terminator, field('consequence', $.then)),
-      field('alternative', optional(choice($.else, $.elsif))),
-      'end'
-    ),
-
-    elsif: $ => seq(
-      'elsif',
-      field('condition', $._statement),
-      choice($._terminator, field('consequence', $.then)),
-      field('alternative', optional(choice($.else, $.elsif)))
-    ),
-
-    else: $ => seq(
-      'else',
-      optional($._terminator),
-      optional($._statements)
-    ),
-
-    then: $ => choice(
-      seq(
-        $._terminator,
-        $._statements
+    unless_modifier: $ =>
+      prec(
+        PREC.RESCUE,
+        seq(field('body', $.statement_), 'unless', field('condition', $.expression_))
       ),
+
+    while_modifier: $ =>
+      prec(
+        PREC.RESCUE,
+        seq(field('body', $.statement_), 'while', field('condition', $.expression_))
+      ),
+
+    until_modifier: $ =>
+      prec(
+        PREC.RESCUE,
+        seq(field('body', $.statement_), 'until', field('condition', $.expression_))
+      ),
+
+    rescue_modifier: $ =>
+      prec(
+        PREC.RESCUE,
+        seq(field('body', $.statement_), 'rescue', field('handler', $.expression_))
+      ),
+
+    while: $ => seq('while', field('condition', $.statement_), field('body', $.do)),
+
+    until: $ => seq('until', field('condition', $.statement_), field('body', $.do)),
+
+    for_each_clause: $ =>
       seq(
+        'for',
+        field('block_iterator', choice($._lhs, $.left_assignment_list)),
+        field('value', $.in),
+        $.do
+      ),
+
+    in: $ => seq('in', alias($.arg, $.block_collection)),
+    do: $ =>
+      seq(
+        choice('do', $.terminator),
+        optional_with_placeholder('statement_or_block', $.statement_list),
+        'end'
+      ),
+
+    case: $ =>
+      seq(
+        'case',
+        field('value', optional($.statement_)),
         optional($._terminator),
-        'then',
-        optional($._statements)
-      )
-    ),
+        repeat($.when),
+        optional($.else_clause),
+        'end'
+      ),
 
-    begin: $ => seq('begin', optional($._terminator), $._body_statement),
+    when: $ =>
+      seq(
+        'when',
+        commaSep1(field('pattern', $.pattern)),
+        choice($._terminator, field('body', $.then))
+      ),
 
-    ensure: $ => seq('ensure', optional($._statements)),
+    pattern: $ => choice($.arg, $.splat_argument),
 
-    rescue: $ => seq(
-      'rescue',
-      field('exceptions', optional($.exceptions)),
-      field('variable', optional($.exception_variable)),
+    if: $ =>
+      seq(
+        $.if_clause,
+        optional_with_placeholder('else_if_clause_list', $.else_if_clause_list),
+        optional_with_placeholder('else_clause_optional', $.else_clause),
+        'end'
+      ),
+
+    else_if_clause_list: $ => repeat1($.else_if_clause),
+
+    if_clause: $ => seq('if', field('condition', $.statement_), $.then),
+
+    unless: $ =>
+      seq(
+        'unless',
+        field('condition', $.statement_),
+        choice($._terminator, $.then),
+        field('alternative', optional(choice($.else_clause, $.else_if_clause))),
+        'end'
+      ),
+
+    else_if_clause: $ => seq('elsif', field('condition', $.statement_), $.then),
+
+    else_clause: $ =>
+      seq(
+        'else',
+        optional($.terminator),
+        optional_with_placeholder('statement_or_block', $.statement_list)
+      ),
+
+    then: $ =>
       choice(
-        $._terminator,
-        field('body', $.then)
-      )
-    ),
+        $.then_postfix,
+        seq($.terminator, optional_with_placeholder('statement_or_block', $.statement_list))
+      ),
 
-    exceptions: $ => commaSep1(choice($._arg, $.splat_argument)),
+    then_postfix: $ =>
+      seq(
+        optional($.terminator),
+        'then',
+        optional_with_placeholder('statement_or_block', $.statement_list)
+      ),
+
+    begin_statement: $ =>
+      seq(
+        $.begin,
+        optional_with_placeholder('rescue_else_ensure_list', $.rescue_else_ensure_list),
+        'end'
+      ),
+
+    begin: $ =>
+      seq(
+        'begin',
+        optional($.terminator),
+        optional_with_placeholder('statement_list', $.statement_list)
+      ),
+
+    ensure: $ => seq('ensure', optional_with_placeholder('statement_list', $.statement_list)),
+
+    rescue: $ =>
+      seq(
+        'rescue',
+        optional_with_placeholder('rescue_parameter_optional', $.rescue_parameter),
+        $.then
+      ),
+
+    rescue_parameter: $ =>
+      choice($.exceptions, $.exception_variable, seq($.exceptions, $.exception_variable)),
+
+    exceptions: $ => commaSep1(choice($.arg, $.splat_argument)),
 
     exception_variable: $ => seq('=>', $._lhs),
 
-    _body_statement: $ => seq(
-      optional($._statements),
-      repeat(choice($.rescue, $.else, $.ensure)),
-      'end'
-    ),
+    body_end_: $ =>
+      seq(optional_with_placeholder('rescue_else_ensure_list', $.rescue_else_ensure_list), 'end'),
+
+    rescue_else_ensure_list: $ => repeat1(choice($.rescue, $.else_clause, $.ensure)),
+
+    body_statement: $ =>
+      seq(
+        optional_with_placeholder('statement_list', $.statement_list),
+        optional_with_placeholder('rescue_else_ensure_list', $.rescue_else_ensure_list),
+        'end'
+      ),
+
+    class_body_statement: $ =>
+      seq(
+        optional_with_placeholder(
+          'class_member_list',
+          alias($.statement_list, $.class_member_list)
+        ),
+        optional_with_placeholder('rescue_else_ensure_list', $.rescue_else_ensure_list),
+        'end'
+      ),
+
+    statement_list: $ => $.statements,
 
     // Method calls without parentheses (aka "command calls") are only allowed
     // in certain positions, like the top-level of a statement, the condition
@@ -399,239 +405,290 @@ module.exports = grammar({
     // contain command calls. The `_arg` rule can appear in many more places,
     // but cannot contain command calls (unless they are wrapped in parens).
     // This naming convention is based on Ruby's standard grammar.
-    _expression: $ => choice(
-      alias($.command_binary, $.binary),
-      alias($.command_unary, $.unary),
-      alias($.command_assignment, $.assignment),
-      alias($.command_operator_assignment, $.operator_assignment),
-      alias($.command_call, $.call),
-      alias($.command_call_with_block, $.call),
-      prec.left(alias($._chained_command_call, $.call)),
-      alias($.return_command, $.return),
-      alias($.yield_command, $.yield),
-      alias($.break_command, $.break),
-      alias($.next_command, $.next),
-      $._arg
-    ),
-
-    _arg: $ => choice(
-      $._primary,
-      $.assignment,
-      $.operator_assignment,
-      $.conditional,
-      $.range,
-      $.binary,
-      $.unary
-    ),
-
-    _primary: $ => choice(
-      $.parenthesized_statements,
-      $._lhs,
-      $.array,
-      $.string_array,
-      $.symbol_array,
-      $.hash,
-      $.subshell,
-      $.simple_symbol,
-      $.delimited_symbol,
-      $.integer,
-      $.float,
-      $.complex,
-      $.rational,
-      $.string,
-      $.character,
-      $.chained_string,
-      $.regex,
-      $.lambda,
-      $.method,
-      $.singleton_method,
-      $.class,
-      $.singleton_class,
-      $.module,
-      $.begin,
-      $.while,
-      $.until,
-      $.if,
-      $.unless,
-      $.for,
-      $.case,
-      $.return,
-      $.yield,
-      $.break,
-      $.next,
-      $.redo,
-      $.retry,
-      alias($.parenthesized_unary, $.unary),
-      alias($.unary_literal, $.unary),
-      $.heredoc_beginning
-    ),
-
-    parenthesized_statements: $ => seq('(', optional($._statements), ')'),
-
-    element_reference: $ => prec.left(1, seq(
-      field('object', $._primary),
-      alias($._element_reference_bracket, '['),
-      optional($._argument_list_with_trailing_comma),
-      ']'
-    )),
-
-    scope_resolution: $ => prec.left(1, seq(
+    expression_: $ =>
       choice(
-        '::',
-        seq(field('scope', $._primary), token.immediate('::'))
+        alias($.command_binary, $.binary),
+        alias($.command_unary, $.unary),
+        alias($.command_assignment, $.assignment_statement),
+        alias($.command_operator_assignment, $.operator_assignment),
+        $.command_call,
+        $.command_call_with_block,
+        prec.left(alias($._chained_command_call, $.chained_command_call)),
+        alias($.return_command, $.return),
+        alias($.yield_command, $.yield),
+        alias($.break_command, $.break),
+        alias($.next_command, $.next),
+        $.arg
       ),
-      field('name', choice($.identifier, $.constant))
-    )),
 
-    _call: $ => prec.left(PREC.CALL, seq(
-      field('receiver', $._primary),
-      choice('.', '&.'),
-      field('method', choice($.identifier, $.operator, $.constant, $.argument_list))
-    )),
-
-    command_call: $ => seq(
+    arg: $ =>
       choice(
-        $._call,
-        $._chained_command_call,
-        field('method', choice(
-          $._variable,
-          $.scope_resolution
-        )),
+        $.primary,
+        $.assignment_statement,
+        $.operator_assignment,
+        $.conditional,
+        $.range,
+        $.binary,
+        $.unary
       ),
-      field('arguments', alias($.command_argument_list, $.argument_list))
-    ),
+
+    primary: $ =>
+      choice(
+        $.parenthesized_statements,
+        $._lhs,
+        $.array,
+        $.string_array,
+        $.symbol_array,
+        $.hash,
+        $.subshell,
+        $.simple_symbol,
+        $.delimited_symbol,
+        $.integer,
+        $.float,
+        $.complex,
+        $.rational,
+        $.string,
+        $.character,
+        $.chained_string,
+        $.regex,
+        $.lambda,
+        $.method,
+        $.singleton_method,
+        $.class,
+        $.singleton_class,
+        $.module,
+        $.begin_statement,
+        $.while,
+        $.until,
+        $.if,
+        $.unless,
+        $.for_each_clause,
+        $.case,
+        $.return,
+        $.yield,
+        $.break,
+        $.next,
+        $.redo,
+        $.retry,
+        $.parenthesized_unary,
+        $.unary_literal,
+        $.heredoc_beginning
+      ),
+
+    parenthesized_statements: $ => seq('(', optional($.statements), ')'),
+
+    element_reference: $ =>
+      prec.left(
+        1,
+        seq(
+          field('object', $.primary),
+          alias($._element_reference_bracket, '['),
+          optional($.argument_list),
+          ']'
+        )
+      ),
+
+    scope_resolution: $ =>
+      prec.left(
+        1,
+        seq(
+          choice('::', seq(field('scope', $.primary), token.immediate('::'))),
+          field('name', choice($.identifier, $.constant))
+        )
+      ),
+
+    _call_expression: $ =>
+      prec.left(
+        PREC.CALL,
+        seq(
+          field('receiver', $.primary),
+          choice('.', '&.'),
+          field('method_identifier', choice($.identifier, $.operator, $.constant, $.argument_list))
+        )
+      ),
+
+    command_call: $ =>
+      seq(
+        choice(
+          $._call_expression,
+          $._chained_command_call,
+          field('method', choice($._variable, $.scope_resolution))
+        ),
+        field('arguments', alias($.command_argument_list, $.argument_list))
+      ),
 
     command_call_with_block: $ => {
       const receiver = choice(
-        $._call,
-        field('method', choice($._variable, $.scope_resolution))
+        $._call_expression,
+        field('method_identifier', choice($._variable, $.scope_resolution))
       )
       const arguments = field('arguments', alias($.command_argument_list, $.argument_list))
       const block = field('block', $.block)
       const doBlock = field('block', $.do_block)
       return choice(
         seq(receiver, prec(PREC.CURLY_BLOCK, seq(arguments, block))),
-        seq(receiver, prec(PREC.DO_BLOCK, seq(arguments, doBlock))),
+        seq(receiver, prec(PREC.DO_BLOCK, seq(arguments, doBlock)))
       )
     },
 
-    _chained_command_call: $ => seq(
-      field('receiver', alias($.command_call_with_block, $.call)),
-      choice('.', '&.'),
-      field('method', choice($.identifier, $.operator, $.constant, $.argument_list))
-    ),
+    _chained_command_call: $ =>
+      seq(
+        field('receiver', alias($.command_call_with_block, $.call)),
+        choice('.', '&.'),
+        field('method', choice($.identifier, $.operator, $.constant, $.argument_list))
+      ),
 
     call: $ => {
       const receiver = choice(
-        $._call,
-        field('method', choice(
-          $._variable,
-          $.scope_resolution
-        ))
+        $._call_expression,
+        field('method_identifier', choice($._variable, $.scope_resolution))
       )
-      const arguments = field('arguments', $.argument_list)
-      const block = field('block', $.block)
-      const doBlock = field('block', $.do_block)
       return choice(
-        seq(receiver, arguments),
-        seq(receiver, prec(PREC.CURLY_BLOCK, seq(arguments, block))),
-        seq(receiver, prec(PREC.DO_BLOCK, seq(arguments, doBlock))),
-        prec(PREC.CURLY_BLOCK, seq(receiver, block)),
-        prec(PREC.DO_BLOCK, seq(receiver, doBlock))
+        seq(receiver, $.arguments),
+        seq(receiver, prec(PREC.CURLY_BLOCK, seq($.arguments, $.block))),
+        seq(receiver, prec(PREC.DO_BLOCK, seq($.arguments, $.do_block))),
+        prec(PREC.CURLY_BLOCK, seq(receiver, $.block)),
+        prec(PREC.DO_BLOCK, seq(receiver, $.do_block))
       )
     },
 
-    command_argument_list: $ => prec.right(commaSep1($._argument)),
+    command_argument_list: $ => prec.right(commaSep1($.argument)),
 
-    argument_list: $ => prec.right(seq(
-      token.immediate('('),
-      optional($._argument_list_with_trailing_comma),
-      ')'
-    )),
+    arguments: $ =>
+      prec.right(
+        seq(token.immediate('('), optional_with_placeholder('argument_list', $.argument_list), ')')
+      ),
 
-    _argument_list_with_trailing_comma: $ => prec.right(seq(
-      commaSep1($._argument),
-      optional(',')
-    )),
+    argument_list: $ => prec.right(seq(commaSep1($.argument), optional(','))),
 
-    _argument: $ => prec.left(choice(
-      $._expression,
-      $.splat_argument,
-      $.hash_splat_argument,
-      $.block_argument,
-      $.pair
-    )),
+    inner_list: $ => prec.right(seq(commaSep1(alias($.argument, $.list_element)), optional(','))),
 
-    splat_argument: $ => seq(alias($._splat_star, '*'), $._arg),
-    hash_splat_argument: $ => seq(alias($._hash_splat_star_star, '**'), $._arg),
-    block_argument: $ => seq(alias($._block_ampersand, '&'), $._arg),
+    argument: $ =>
+      prec.left(
+        choice($.expression_, $.splat_argument, $.hash_splat_argument, $.block_argument, $.pair)
+      ),
 
-    do_block: $ => seq(
-      'do',
-      optional($._terminator),
-      optional(seq(
-        field('parameters', $.block_parameters),
-        optional($._terminator)
-      )),
-      $._body_statement
-    ),
+    splat_argument: $ => seq(alias($._splat_star, '*'), $.arg),
+    hash_splat_argument: $ => seq(alias($._hash_splat_star_star, '**'), $.arg),
+    block_argument: $ => seq(alias($._block_ampersand, '&'), $.arg),
 
-    block: $ => prec(PREC.CURLY_BLOCK, seq(
-      '{',
-      field('parameters', optional($.block_parameters)),
-      optional($._statements),
-      '}'
-    )),
-
-    assignment: $ => prec.right(PREC.ASSIGN, choice(
+    do_block: $ =>
       seq(
-        field('left', choice($._lhs, $.left_assignment_list)),
-        '=',
-        field('right', choice(
-          $._arg,
-          $.splat_argument,
-          $.right_assignment_list
-        ))
-      )
-    )),
+        'do',
+        optional($._terminator),
+        optional(seq(field('parameters', $.block_parameters), optional($._terminator))),
+        $.body_statement
+      ),
 
-    command_assignment: $ => prec.right(PREC.ASSIGN, choice(
-      seq(
-        field('left', choice($._lhs, $.left_assignment_list)),
-        '=',
-        field('right', $._expression)
-      )
-    )),
+    block: $ =>
+      prec(
+        PREC.CURLY_BLOCK,
+        seq(
+          '{',
+          field('parameters', optional($.block_parameters)),
+          optional_with_placeholder('statement_list', $.statement_list),
+          '}'
+        )
+      ),
 
-    operator_assignment: $ => prec.right(PREC.ASSIGN, seq(
-      field('left', $._lhs),
-      field('operator', choice('+=', '-=', '*=', '**=', '/=', '||=', '|=', '&&=', '&=', '%=', '>>=', '<<=', '^=')),
-      field('right', $._arg)
-    )),
+    assignment_statement: $ =>
+      prec.right(
+        PREC.ASSIGN,
+        choice(
+          seq(
+            field('assignment_variable', choice($._lhs, $.left_assignment_list)),
+            '=',
+            field('assignment_value', choice($.arg, $.splat_argument, $.right_assignment_list))
+          )
+        )
+      ),
 
-    command_operator_assignment: $ => prec.right(PREC.ASSIGN, seq(
-      field('left', $._lhs),
-      field('operator', choice('+=', '-=', '*=', '**=', '/=', '||=', '|=', '&&=', '&=', '%=', '>>=', '<<=', '^=')),
-      field('right', $._expression)
-    )),
+    command_assignment: $ =>
+      prec.right(
+        PREC.ASSIGN,
+        choice(
+          seq(
+            field('left', choice($._lhs, $.left_assignment_list)),
+            '=',
+            field('right', $.expression_)
+          )
+        )
+      ),
 
-    conditional: $ => prec.right(PREC.CONDITIONAL, seq(
-      field('condition', $._arg),
-      '?',
-      field('consequence', $._arg),
-      ':',
-      field('alternative', $._arg)
-    )),
+    operator_assignment: $ =>
+      prec.right(
+        PREC.ASSIGN,
+        seq(
+          field('left', $._lhs),
+          field(
+            'operator',
+            choice(
+              '+=',
+              '-=',
+              '*=',
+              '**=',
+              '/=',
+              '||=',
+              '|=',
+              '&&=',
+              '&=',
+              '%=',
+              '>>=',
+              '<<=',
+              '^='
+            )
+          ),
+          field('right', $.arg)
+        )
+      ),
+
+    command_operator_assignment: $ =>
+      prec.right(
+        PREC.ASSIGN,
+        seq(
+          field('left', $._lhs),
+          field(
+            'operator',
+            choice(
+              '+=',
+              '-=',
+              '*=',
+              '**=',
+              '/=',
+              '||=',
+              '|=',
+              '&&=',
+              '&=',
+              '%=',
+              '>>=',
+              '<<=',
+              '^='
+            )
+          ),
+          field('right', $.expression_)
+        )
+      ),
+
+    conditional: $ =>
+      prec.right(
+        PREC.CONDITIONAL,
+        seq(
+          field('condition', $.arg),
+          '?',
+          field('consequence', $.arg),
+          ':',
+          field('alternative', $.arg)
+        )
+      ),
 
     range: $ => {
-      const begin = field('begin', $._arg);
-      const end = field('end', $._arg);
-      const operator = field('operator', choice('..', '...'));
-      return prec.right(PREC.RANGE, choice(
-        seq(begin, operator, end),
-        seq(operator, end),
-        seq(begin, operator)
-      ));
+      const begin = field('begin', $.arg)
+      const end = field('end', $.arg)
+      const operator = field('operator', choice('..', '...'))
+      return prec.right(
+        PREC.RANGE,
+        choice(seq(begin, operator, end), seq(operator, end), seq(begin, operator))
+      )
     },
 
     binary: $ => {
@@ -648,32 +705,39 @@ module.exports = grammar({
         [prec.left, PREC.MULTIPLICATIVE, choice('/', '%', alias($._binary_star, '*'))],
         [prec.right, PREC.RELATIONAL, choice('==', '!=', '===', '<=>', '=~', '!~')],
         [prec.right, PREC.EXPONENTIAL, alias($._binary_star_star, '**')],
-      ];
+      ]
 
-      return choice(...operators.map(([fn, precedence, operator]) => fn(precedence, seq(
-        field('left', $._arg),
-        field('operator', operator),
-        field('right', $._arg)
-      ))));
+      return choice(
+        ...operators.map(([fn, precedence, operator]) =>
+          fn(
+            precedence,
+            seq(field('left', $.arg), field('operator', operator), field('right', $.arg))
+          )
+        )
+      )
     },
 
-    command_binary: $ => prec.left(seq(
-      field('left', $._expression),
-      field('operator', choice('or', 'and')),
-      field('right', $._expression)
-    )),
+    command_binary: $ =>
+      prec.left(
+        seq(
+          field('left', $.expression_),
+          field('operator', choice('or', 'and')),
+          field('right', $.expression_)
+        )
+      ),
 
     unary: $ => {
       const operators = [
         [prec, PREC.DEFINED, 'defined?'],
         [prec.right, PREC.NOT, 'not'],
         [prec.right, PREC.UNARY_MINUS, choice(alias($._unary_minus, '-'), '+')],
-        [prec.right, PREC.COMPLEMENT, choice('!', '~')]
-      ];
-      return choice(...operators.map(([fn, precedence, operator]) => fn(precedence, seq(
-        field('operator', operator),
-        field('operand', $._arg)
-      ))));
+        [prec.right, PREC.COMPLEMENT, choice('!', '~')],
+      ]
+      return choice(
+        ...operators.map(([fn, precedence, operator]) =>
+          fn(precedence, seq(field('operator', operator), field('operand', $.arg)))
+        )
+      )
     },
 
     command_unary: $ => {
@@ -681,96 +745,137 @@ module.exports = grammar({
         [prec, PREC.DEFINED, 'defined?'],
         [prec.right, PREC.NOT, 'not'],
         [prec.right, PREC.UNARY_MINUS, choice(alias($._unary_minus, '-'), '+')],
-        [prec.right, PREC.COMPLEMENT, choice('!', '~')]
-      ];
-      return choice(...operators.map(([fn, precedence, operator]) => fn(precedence, seq(
-        field('operator', operator),
-        field('operand', $._expression)
-      ))));
+        [prec.right, PREC.COMPLEMENT, choice('!', '~')],
+      ]
+      return choice(
+        ...operators.map(([fn, precedence, operator]) =>
+          fn(precedence, seq(field('operator', operator), field('operand', $.expression_)))
+        )
+      )
     },
 
-    parenthesized_unary: $ => prec(PREC.CALL, seq(
-      field('operator', choice('defined?', 'not')),
-      field('operand', $.parenthesized_statements)
-    )),
+    parenthesized_unary: $ =>
+      prec(
+        PREC.CALL,
+        seq(
+          field('operator', choice('defined?', 'not')),
+          field('operand', $.parenthesized_statements)
+        )
+      ),
 
-    unary_literal: $ => prec.right(PREC.UNARY_MINUS, seq(
-      field('operator', choice(alias($._unary_minus, '-'), '+')),
-      field('operand', choice($.integer, $.float))
-    )),
+    unary_literal: $ =>
+      prec.right(
+        PREC.UNARY_MINUS,
+        seq(
+          field('operator', choice(alias($._unary_minus, '-'), '+')),
+          field('operand', choice($.integer, $.float))
+        )
+      ),
 
-    right_assignment_list: $ => prec(-1, commaSep1(choice($._arg, $.splat_argument))),
+    right_assignment_list: $ => prec(-1, commaSep1(choice($.arg, $.splat_argument))),
 
     left_assignment_list: $ => $._mlhs,
-    _mlhs: $ => prec.left(-1, seq(
-      commaSep1(choice($._lhs, $.rest_assignment, $.destructured_left_assignment)),
-      optional(',')
-    )),
+    _mlhs: $ =>
+      prec.left(
+        -1,
+        seq(
+          commaSep1(choice($._lhs, $.rest_assignment, $.destructured_left_assignment)),
+          optional(',')
+        )
+      ),
     destructured_left_assignment: $ => prec(-1, seq('(', $._mlhs, ')')),
 
     rest_assignment: $ => prec(-1, seq('*', optional($._lhs))),
 
-    _lhs: $ => prec.left(choice(
-      $._variable,
-      $.true,
-      $.false,
-      $.nil,
-      $.scope_resolution,
-      $.element_reference,
-      alias($._call, $.call),
-      $.call
-    )),
+    _lhs: $ =>
+      prec.left(
+        choice(
+          $._variable,
+          $.true,
+          $.false,
+          $.nil_,
+          $.scope_resolution,
+          $.element_reference,
+          alias($._call_expression, $.call),
+          $.call
+        )
+      ),
 
-    _variable: $ => prec.right(choice(
-      $.self,
-      $.super,
-      $.instance_variable,
-      $.class_variable,
-      $.global_variable,
-      $.identifier,
-      $.constant
-    )),
+    _variable: $ =>
+      prec.right(
+        choice(
+          $.self,
+          $.super,
+          $.instance_variable,
+          $.class_variable,
+          $.global_variable,
+          $.identifier,
+          $.constant
+        )
+      ),
 
-    operator: $ => choice(
-      '..', '|', '^', '&', '<=>', '==', '===', '=~', '>', '>=', '<', '<=', '+',
-      '-', '*', '/', '%', '!', '!~', '**', '<<', '>>', '~', '+@', '-@', '[]', '[]=', '`'
-    ),
+    operator: $ =>
+      choice(
+        '..',
+        '|',
+        '^',
+        '&',
+        '<=>',
+        '==',
+        '===',
+        '=~',
+        '>',
+        '>=',
+        '<',
+        '<=',
+        '+',
+        '-',
+        '*',
+        '/',
+        '%',
+        '!',
+        '!~',
+        '**',
+        '<<',
+        '>>',
+        '~',
+        '+@',
+        '-@',
+        '[]',
+        '[]=',
+        '`'
+      ),
 
-    _method_name: $ => choice(
-      $.identifier,
-      $.constant,
-      $.setter,
-      $.simple_symbol,
-      $.delimited_symbol,
-      $.operator,
-      $.instance_variable,
-      $.class_variable,
-      $.global_variable
-    ),
+    _method_name: $ =>
+      choice(
+        $.identifier,
+        $.constant,
+        $.setter,
+        $.simple_symbol,
+        $.delimited_symbol,
+        $.operator,
+        $.instance_variable,
+        $.class_variable,
+        $.global_variable
+      ),
     setter: $ => seq(field('name', $.identifier), '='),
 
     undef: $ => seq('undef', commaSep1($._method_name)),
-    alias: $ => seq(
-      'alias',
-      field('name', $._method_name),
-      field('alias', $._method_name)
-    ),
+    alias: $ => seq('alias', field('name', $._method_name), field('alias', $._method_name)),
 
-    comment: $ => token(prec(PREC.COMMENT, choice(
-      seq('#', /.*/),
-      seq(
-        /=begin.*\r?\n/,
-        repeat(choice(
-          /[^=]/,
-          /=[^e]/,
-          /=e[^n]/,
-          /=en[^d]/
-        )),
-        /=end/
-      )
-    ))),
+    comment: $ =>
+      token(
+        prec(
+          PREC.COMMENT,
+          choice(
+            seq('#', /.*/),
+            seq(/=begin.*\r?\n/, repeat(choice(/[^=]/, /=[^e]/, /=e[^n]/, /=en[^d]/)), /=end/)
+          )
+        )
+      ),
 
-    integer: $ => /0[bB][01](_?[01])*|0[oO]?[0-7](_?[0-7])*|(0[dD])?\d(_?\d)*|0[xX][0-9a-fA-F](_?[0-9a-fA-F])*/,
+    integer: $ =>
+      /0[bB][01](_?[01])*|0[oO]?[0-7](_?[0-7])*|(0[dD])?\d(_?\d)*|0[xX][0-9a-fA-F](_?[0-9a-fA-F])*/,
 
     float: $ => /\d(_?\d)*(\.\d)?(_?\d)*([eE][\+-]?\d(_?\d)*)?/,
     complex: $ => /(\d+)?(\+|-)?(\d+)i/,
@@ -779,7 +884,7 @@ module.exports = grammar({
     self: $ => 'self',
     true: $ => token(choice('true', 'TRUE')),
     false: $ => token(choice('false', 'FALSE')),
-    nil: $ => token(choice('nil', 'NIL')),
+    nil_: $ => token(choice('nil', 'NIL')),
 
     constant: $ => token(seq(/[A-Z]/, IDENTIFIER_CHARS, /(\?|\!)?/)),
     identifier: $ => token(seq(LOWER_ALPHA_CHAR, IDENTIFIER_CHARS, /(\?|\!)?/)),
@@ -792,141 +897,118 @@ module.exports = grammar({
 
     character: $ => /\?(\\\S({[0-9A-Fa-f]*}|[0-9A-Fa-f]*|-\S([MC]-\S)?)?|\S)/,
 
-    interpolation: $ => seq(
-      '#{', optional($._statements),'}'
-    ),
+    interpolation: $ => seq('#{', optional($.statements), '}'),
 
-    string: $ => seq(
-      alias($._string_start, '"'),
-      optional($._literal_contents),
-      alias($._string_end, '"')
-    ),
+    string: $ =>
+      seq(alias($._string_start, '"'), optional($._literal_contents), alias($._string_end, '"')),
 
-    subshell: $ => seq(
-      alias($._subshell_start, '`'),
-      optional($._literal_contents),
-      alias($._string_end, '`')
-    ),
+    subshell: $ =>
+      seq(alias($._subshell_start, '`'), optional($._literal_contents), alias($._string_end, '`')),
 
-    string_array: $ => seq(
-      alias($._string_array_start, '%w('),
-      optional(/\s+/),
-      sep(alias($._literal_contents, $.bare_string), /\s+/),
-      optional(/\s+/),
-      alias($._string_end, ')')
-    ),
+    string_array: $ =>
+      seq(
+        alias($._string_array_start, '%w('),
+        optional(/\s+/),
+        sep(alias($._literal_contents, $.bare_string), /\s+/),
+        optional(/\s+/),
+        alias($._string_end, ')')
+      ),
 
-    symbol_array: $ => seq(
-      alias($._symbol_array_start, '%i('),
-      optional(/\s+/),
-      sep(alias($._literal_contents, $.bare_symbol), /\s+/),
-      optional(/\s+/),
-      alias($._string_end, ')')
-    ),
+    symbol_array: $ =>
+      seq(
+        alias($._symbol_array_start, '%i('),
+        optional(/\s+/),
+        sep(alias($._literal_contents, $.bare_symbol), /\s+/),
+        optional(/\s+/),
+        alias($._string_end, ')')
+      ),
 
-    delimited_symbol: $ => seq(
-      alias($._symbol_start, ':"'),
-      optional($._literal_contents),
-      alias($._string_end, '"')
-    ),
+    delimited_symbol: $ =>
+      seq(alias($._symbol_start, ':"'), optional($._literal_contents), alias($._string_end, '"')),
 
-    regex: $ => seq(
-      alias($._regex_start, '/'),
-      optional($._literal_contents),
-      alias($._string_end, '/')
-    ),
+    regex: $ =>
+      seq(alias($._regex_start, '/'), optional($._literal_contents), alias($._string_end, '/')),
 
-    heredoc_body: $ => seq(
-      $._heredoc_body_start,
-      repeat(choice(
-        $.heredoc_content,
-        $.interpolation,
-        $.escape_sequence
-      )),
-      $.heredoc_end
-    ),
+    heredoc_body: $ =>
+      seq(
+        $._heredoc_body_start,
+        repeat(choice($.heredoc_content, $.interpolation, $.escape_sequence)),
+        $.heredoc_end
+      ),
 
-    _literal_contents: $ => repeat1(choice(
-      $.string_content,
-      $.interpolation,
-      $.escape_sequence
-    )),
+    _literal_contents: $ => repeat1(choice($.string_content, $.interpolation, $.escape_sequence)),
 
     // https://ruby-doc.org/core-2.5.0/doc/syntax/literals_rdoc.html#label-Strings
-    escape_sequence: $ => token(seq(
-      '\\',
-      choice(
-        /[^ux0-7]/,          // single character
-        /x[0-9a-fA-F]{1,2}/, // hex code
-        /[0-7]{1,3}/,        // octal
-        /u[0-9a-fA-F]{4}/,   // single unicode
-        /u{[0-9a-fA-F ]+}/,  // multiple unicode
-      )
-    )),
-
-    array: $ => seq(
-      '[',
-      optional($._argument_list_with_trailing_comma),
-      ']'
-    ),
-
-    hash: $ => seq(
-      '{',
-      optional(seq(
-        commaSep1(choice($.pair, $.hash_splat_argument)),
-        optional(',')
-      )),
-      '}'
-    ),
-
-    pair: $ => choice(
-      seq(
-        field('key', $._arg),
-        '=>',
-        field('value', $._arg)
+    escape_sequence: $ =>
+      token(
+        seq(
+          '\\',
+          choice(
+            /[^ux0-7]/, // single character
+            /x[0-9a-fA-F]{1,2}/, // hex code
+            /[0-7]{1,3}/, // octal
+            /u[0-9a-fA-F]{4}/, // single unicode
+            /u{[0-9a-fA-F ]+}/ // multiple unicode
+          )
+        )
       ),
-      seq(
-        field('key', choice(
-          $.hash_key_symbol,
-          alias($.identifier, $.hash_key_symbol),
-          alias($.constant, $.hash_key_symbol),
-          $.string
-        )),
-        token.immediate(':'),
-        field('value', $._arg)
-      )
-    ),
 
-    lambda: $ => seq(
-      '->',
-      field('parameters', optional(choice(
-        alias($.parameters, $.lambda_parameters),
-        alias($.bare_parameters, $.lambda_parameters)
-      ))),
-      field('body', choice($.block, $.do_block))
-    ),
+    array: $ => seq('[', optional_with_placeholder('inner_list', $.inner_list), ']'),
+
+    hash: $ =>
+      seq('{', optional(seq(commaSep1(choice($.pair, $.hash_splat_argument)), optional(','))), '}'),
+
+    pair: $ =>
+      choice(
+        seq(field('key', $.arg), '=>', field('value', $.arg)),
+        seq(
+          field(
+            'key',
+            choice(
+              $.hash_key_symbol,
+              alias($.identifier, $.hash_key_symbol),
+              alias($.constant, $.hash_key_symbol),
+              $.string
+            )
+          ),
+          token.immediate(':'),
+          field('value', $.arg)
+        )
+      ),
+
+    lambda: $ =>
+      seq(
+        '->',
+        choice(
+          alias($.parameter_list_block, $.lambda_parameters),
+          optional_with_placeholder('paremeter_list', $.bare_parameters)
+        ),
+        choice($.block, $.do_block)
+      ),
 
     empty_statement: $ => prec(-1, ';'),
 
-    _terminator: $ => choice(
-      $._line_break,
-      ';'
-    ),
-  }
-});
+    _terminator: $ => choice($._line_break, ';'),
+    terminator: $ => $._terminator,
+  },
+})
 
-function sep (rule, separator) {
-  return optional(sep1(rule, separator));
+function sep(rule, separator) {
+  return optional(sep1(rule, separator))
 }
 
-function sep1 (rule, separator) {
-  return seq(rule, repeat(seq(separator, rule)));
+function sep1(rule, separator) {
+  return seq(rule, repeat(seq(separator, rule)))
 }
 
-function commaSep1 (rule) {
-  return sep1(rule, ',');
+function commaSep1(rule) {
+  return sep1(rule, ',')
 }
 
-function commaSep (rule) {
-  return optional(commaSep1(rule));
+function commaSep(rule) {
+  return optional(commaSep1(rule))
+}
+
+function optional_with_placeholder(field_name, rule) {
+  return choice(field(field_name, rule), field(field_name, blank()))
 }

@@ -337,31 +337,7 @@
       "required": true,
       "types": [
         {
-          "type": "block_parameter",
-          "named": true
-        },
-        {
-          "type": "hash_splat_parameter",
-          "named": true
-        },
-        {
-          "type": "identifier",
-          "named": true
-        },
-        {
-          "type": "keyword_parameter",
-          "named": true
-        },
-        {
-          "type": "optional_parameter",
-          "named": true
-        },
-        {
           "type": "parameter",
-          "named": true
-        },
-        {
-          "type": "splat_parameter",
           "named": true
         }
       ]
@@ -376,7 +352,7 @@
         "required": false,
         "types": [
           {
-            "type": "bare_parameters",
+            "type": "parameter_list",
             "named": true
           }
         ]
@@ -926,7 +902,7 @@
     "type": "chained_command_call",
     "named": true,
     "fields": {
-      "method": {
+      "method_identifier": {
         "multiple": false,
         "required": true,
         "types": [
@@ -1048,9 +1024,9 @@
           }
         ]
       },
-      "method": {
+      "method_identifier": {
         "multiple": false,
-        "required": false,
+        "required": true,
         "types": [
           {
             "type": "_variable",
@@ -1066,28 +1042,6 @@
           },
           {
             "type": "scope_resolution",
-            "named": true
-          }
-        ]
-      },
-      "method_identifier": {
-        "multiple": false,
-        "required": false,
-        "types": [
-          {
-            "type": "argument_list",
-            "named": true
-          },
-          {
-            "type": "constant",
-            "named": true
-          },
-          {
-            "type": "identifier",
-            "named": true
-          },
-          {
-            "type": "operator",
             "named": true
           }
         ]
@@ -2402,6 +2356,21 @@
         },
         {
           "type": "splat_parameter",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "parameter_list",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "parameter",
           "named": true
         }
       ]

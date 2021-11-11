@@ -147,9 +147,16 @@ module.exports = grammar({
       seq('(', optional_with_placeholder('parameter_list', commaSep($.parameter)), ')'),
 
     bare_parameters_with_terminator: $ =>
-      seq(optional_with_placeholder('parameter_list_optional', $.bare_parameters), $.terminator),
+      seq(
+        optional_with_placeholder(
+          'parameter_list_optional',
+          alias($.bare_parameters, $.parameter_list)
+        ),
+        $.terminator
+      ),
 
-    bare_parameters: $ => seq($._simple_formal_parameter, repeat(seq(',', $.parameter))),
+    bare_parameters: $ =>
+      seq(alias($._simple_formal_parameter, $.parameter), repeat(seq(',', $.parameter))),
 
     block_parameters: $ =>
       seq(
@@ -512,7 +519,7 @@ module.exports = grammar({
         choice(
           $._call_expression,
           $._chained_command_call,
-          field('method', choice($._variable, $.scope_resolution))
+          field('method_identifier', choice($._variable, $.scope_resolution))
         ),
         field('arguments', alias($.command_argument_list, $.argument_list))
       ),
@@ -535,7 +542,7 @@ module.exports = grammar({
       seq(
         field('receiver', alias($.command_call_with_block, $.call)),
         choice('.', '&.'),
-        field('method', choice($.identifier, $.operator, $.constant, $.argument_list))
+        field('method_identifier', choice($.identifier, $.operator, $.constant, $.argument_list))
       ),
 
     call: $ => {

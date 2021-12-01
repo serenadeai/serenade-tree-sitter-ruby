@@ -110,7 +110,7 @@
       "required": true,
       "types": [
         {
-          "type": "assignment_statement",
+          "type": "assignment",
           "named": true
         },
         {
@@ -203,23 +203,7 @@
     }
   },
   {
-    "type": "array",
-    "named": true,
-    "fields": {
-      "inner_list": {
-        "multiple": false,
-        "required": false,
-        "types": [
-          {
-            "type": "inner_list",
-            "named": true
-          }
-        ]
-      }
-    }
-  },
-  {
-    "type": "assignment_statement",
+    "type": "assignment",
     "named": true,
     "fields": {
       "assignment_value": {
@@ -419,12 +403,12 @@
     "type": "begin",
     "named": true,
     "fields": {
-      "statement_list": {
+      "rescue_else_ensure_list": {
         "multiple": false,
         "required": false,
         "types": [
           {
-            "type": "statement_list",
+            "type": "rescue_else_ensure_list",
             "named": true
           }
         ]
@@ -432,10 +416,10 @@
     },
     "children": {
       "multiple": false,
-      "required": false,
+      "required": true,
       "types": [
         {
-          "type": "terminator",
+          "type": "begin_clause",
           "named": true
         }
       ]
@@ -457,15 +441,15 @@
     }
   },
   {
-    "type": "begin_statement",
+    "type": "begin_clause",
     "named": true,
     "fields": {
-      "rescue_else_ensure_list": {
+      "statement_list": {
         "multiple": false,
         "required": false,
         "types": [
           {
-            "type": "rescue_else_ensure_list",
+            "type": "statement_list",
             "named": true
           }
         ]
@@ -473,10 +457,10 @@
     },
     "children": {
       "multiple": false,
-      "required": true,
+      "required": false,
       "types": [
         {
-          "type": "begin",
+          "type": "terminator",
           "named": true
         }
       ]
@@ -623,32 +607,6 @@
     }
   },
   {
-    "type": "block",
-    "named": true,
-    "fields": {
-      "parameters": {
-        "multiple": false,
-        "required": false,
-        "types": [
-          {
-            "type": "block_parameters",
-            "named": true
-          }
-        ]
-      },
-      "statement_list": {
-        "multiple": false,
-        "required": false,
-        "types": [
-          {
-            "type": "statement_list",
-            "named": true
-          }
-        ]
-      }
-    }
-  },
-  {
     "type": "block_argument",
     "named": true,
     "fields": {},
@@ -672,7 +630,7 @@
       "required": true,
       "types": [
         {
-          "type": "assignment_statement",
+          "type": "assignment",
           "named": true
         },
         {
@@ -807,11 +765,11 @@
         "required": false,
         "types": [
           {
-            "type": "block",
+            "type": "do_block",
             "named": true
           },
           {
-            "type": "do_block",
+            "type": "enclosed_body_",
             "named": true
           }
         ]
@@ -858,11 +816,11 @@
           "named": true
         },
         {
-          "type": "block",
+          "type": "do_block",
           "named": true
         },
         {
-          "type": "do_block",
+          "type": "enclosed_body_",
           "named": true
         }
       ]
@@ -877,7 +835,7 @@
         "required": false,
         "types": [
           {
-            "type": "statement_",
+            "type": "statement",
             "named": true
           }
         ]
@@ -1004,7 +962,7 @@
       "required": true,
       "types": [
         {
-          "type": "statements",
+          "type": "members",
           "named": true
         }
       ]
@@ -1081,11 +1039,11 @@
         "required": true,
         "types": [
           {
-            "type": "block",
+            "type": "do_block",
             "named": true
           },
           {
-            "type": "do_block",
+            "type": "enclosed_body_",
             "named": true
           }
         ]
@@ -1122,6 +1080,57 @@
           }
         ]
       }
+    }
+  },
+  {
+    "type": "condition",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "alias",
+          "named": true
+        },
+        {
+          "type": "begin_block",
+          "named": true
+        },
+        {
+          "type": "end_block",
+          "named": true
+        },
+        {
+          "type": "expression_",
+          "named": true
+        },
+        {
+          "type": "if_modifier",
+          "named": true
+        },
+        {
+          "type": "rescue_modifier",
+          "named": true
+        },
+        {
+          "type": "undef",
+          "named": true
+        },
+        {
+          "type": "unless_modifier",
+          "named": true
+        },
+        {
+          "type": "until_modifier",
+          "named": true
+        },
+        {
+          "type": "while_modifier",
+          "named": true
+        }
+      ]
     }
   },
   {
@@ -1251,10 +1260,29 @@
     }
   },
   {
+    "type": "dictionary",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "hash_splat_argument",
+          "named": true
+        },
+        {
+          "type": "pair",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "do",
     "named": true,
     "fields": {
-      "statement_or_block": {
+      "statement_list": {
         "multiple": false,
         "required": false,
         "types": [
@@ -1332,7 +1360,7 @@
     "type": "else_clause",
     "named": true,
     "fields": {
-      "statement_or_block": {
+      "statement_list": {
         "multiple": false,
         "required": false,
         "types": [
@@ -1363,7 +1391,7 @@
         "required": true,
         "types": [
           {
-            "type": "statement_",
+            "type": "statement",
             "named": true
           }
         ]
@@ -1401,6 +1429,32 @@
     "fields": {}
   },
   {
+    "type": "enclosed_body_",
+    "named": true,
+    "fields": {
+      "parameters": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "block_parameters",
+            "named": true
+          }
+        ]
+      },
+      "statement_list_": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "statement_list_",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
     "type": "end_block",
     "named": true,
     "fields": {},
@@ -1416,7 +1470,7 @@
     }
   },
   {
-    "type": "ensure",
+    "type": "ensure_clause",
     "named": true,
     "fields": {
       "statement_list": {
@@ -1502,7 +1556,7 @@
           "named": true
         },
         {
-          "type": "assignment_statement",
+          "type": "assignment",
           "named": true
         },
         {
@@ -1576,7 +1630,7 @@
           "named": true
         },
         {
-          "type": "assignment_statement",
+          "type": "assignment",
           "named": true
         },
         {
@@ -1617,6 +1671,21 @@
         },
         {
           "type": "yield",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "for",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "for_each_clause",
           "named": true
         }
       ]
@@ -1681,25 +1750,6 @@
       "types": [
         {
           "type": "do",
-          "named": true
-        }
-      ]
-    }
-  },
-  {
-    "type": "hash",
-    "named": true,
-    "fields": {},
-    "children": {
-      "multiple": true,
-      "required": false,
-      "types": [
-        {
-          "type": "hash_splat_argument",
-          "named": true
-        },
-        {
-          "type": "pair",
           "named": true
         }
       ]
@@ -1808,7 +1858,7 @@
         "required": true,
         "types": [
           {
-            "type": "statement_",
+            "type": "statement",
             "named": true
           }
         ]
@@ -1834,7 +1884,7 @@
         "required": true,
         "types": [
           {
-            "type": "statement_",
+            "type": "statement",
             "named": true
           }
         ]
@@ -1942,11 +1992,11 @@
       "required": true,
       "types": [
         {
-          "type": "block",
+          "type": "do_block",
           "named": true
         },
         {
-          "type": "do_block",
+          "type": "enclosed_body_",
           "named": true
         },
         {
@@ -2024,6 +2074,22 @@
     }
   },
   {
+    "type": "list",
+    "named": true,
+    "fields": {
+      "inner_list": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "inner_list",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
     "type": "list_element",
     "named": true,
     "fields": {},
@@ -2049,6 +2115,76 @@
         },
         {
           "type": "splat_argument",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "member",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "alias",
+          "named": true
+        },
+        {
+          "type": "begin_block",
+          "named": true
+        },
+        {
+          "type": "end_block",
+          "named": true
+        },
+        {
+          "type": "expression_",
+          "named": true
+        },
+        {
+          "type": "if_modifier",
+          "named": true
+        },
+        {
+          "type": "rescue_modifier",
+          "named": true
+        },
+        {
+          "type": "undef",
+          "named": true
+        },
+        {
+          "type": "unless_modifier",
+          "named": true
+        },
+        {
+          "type": "until_modifier",
+          "named": true
+        },
+        {
+          "type": "while_modifier",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "members",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "empty_statement",
+          "named": true
+        },
+        {
+          "type": "member",
           "named": true
         }
       ]
@@ -2473,11 +2609,7 @@
           "named": true
         },
         {
-          "type": "array",
-          "named": true
-        },
-        {
-          "type": "begin_statement",
+          "type": "begin",
           "named": true
         },
         {
@@ -2513,6 +2645,10 @@
           "named": true
         },
         {
+          "type": "dictionary",
+          "named": true
+        },
+        {
           "type": "element_reference",
           "named": true
         },
@@ -2525,11 +2661,7 @@
           "named": true
         },
         {
-          "type": "for_each_clause",
-          "named": true
-        },
-        {
-          "type": "hash",
+          "type": "for",
           "named": true
         },
         {
@@ -2546,6 +2678,10 @@
         },
         {
           "type": "lambda",
+          "named": true
+        },
+        {
+          "type": "list",
           "named": true
         },
         {
@@ -2655,7 +2791,7 @@
     "type": "range",
     "named": true,
     "fields": {
-      "begin": {
+      "begin_": {
         "multiple": false,
         "required": false,
         "types": [
@@ -2749,7 +2885,7 @@
     }
   },
   {
-    "type": "rescue",
+    "type": "rescue_clause",
     "named": true,
     "fields": {
       "rescue_parameter_optional": {
@@ -2787,11 +2923,11 @@
           "named": true
         },
         {
-          "type": "ensure",
+          "type": "ensure_clause",
           "named": true
         },
         {
-          "type": "rescue",
+          "type": "rescue_clause",
           "named": true
         }
       ]
@@ -2806,7 +2942,7 @@
         "required": true,
         "types": [
           {
-            "type": "statement_",
+            "type": "statement",
             "named": true
           }
         ]
@@ -3116,7 +3252,7 @@
     }
   },
   {
-    "type": "statement_",
+    "type": "statement",
     "named": true,
     "fields": {},
     "children": {
@@ -3167,7 +3303,37 @@
     }
   },
   {
+    "type": "statement_",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "statement",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "statement_list",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "statements",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "statement_list_",
     "named": true,
     "fields": {},
     "children": {
@@ -3191,6 +3357,10 @@
       "types": [
         {
           "type": "empty_statement",
+          "named": true
+        },
+        {
+          "type": "statement",
           "named": true
         },
         {
@@ -3285,7 +3455,7 @@
     "type": "then",
     "named": true,
     "fields": {
-      "statement_or_block": {
+      "statement_list": {
         "multiple": false,
         "required": false,
         "types": [
@@ -3315,7 +3485,7 @@
     "type": "then_postfix",
     "named": true,
     "fields": {
-      "statement_or_block": {
+      "statement_list": {
         "multiple": false,
         "required": false,
         "types": [
@@ -3459,7 +3629,7 @@
         "required": true,
         "types": [
           {
-            "type": "statement_",
+            "type": "statement",
             "named": true
           }
         ]
@@ -3485,7 +3655,7 @@
         "required": true,
         "types": [
           {
-            "type": "statement_",
+            "type": "statement",
             "named": true
           }
         ]
@@ -3505,6 +3675,21 @@
   {
     "type": "until",
     "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "until_clause",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "until_clause",
+    "named": true,
     "fields": {
       "body": {
         "multiple": false,
@@ -3515,17 +3700,17 @@
             "named": true
           }
         ]
-      },
-      "condition": {
-        "multiple": false,
-        "required": true,
-        "types": [
-          {
-            "type": "statement_",
-            "named": true
-          }
-        ]
       }
+    },
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "condition",
+          "named": true
+        }
+      ]
     }
   },
   {
@@ -3537,7 +3722,7 @@
         "required": true,
         "types": [
           {
-            "type": "statement_",
+            "type": "statement",
             "named": true
           }
         ]
@@ -3583,6 +3768,21 @@
   {
     "type": "while",
     "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "while_clause",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "while_clause",
+    "named": true,
     "fields": {
       "body": {
         "multiple": false,
@@ -3593,17 +3793,17 @@
             "named": true
           }
         ]
-      },
-      "condition": {
-        "multiple": false,
-        "required": true,
-        "types": [
-          {
-            "type": "statement_",
-            "named": true
-          }
-        ]
       }
+    },
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "condition",
+          "named": true
+        }
+      ]
     }
   },
   {
@@ -3615,7 +3815,7 @@
         "required": true,
         "types": [
           {
-            "type": "statement_",
+            "type": "statement",
             "named": true
           }
         ]

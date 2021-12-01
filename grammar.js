@@ -79,6 +79,8 @@ module.exports = grammar({
     [$.primary, $.chained_string],
     [$.chained_string],
     [$._chained_command_call, $._variable],
+    [$.begin, $.primary],
+    [$.member, $.statement],
   ],
 
   supertypes: $ => [$._method_name, $._variable],
@@ -92,19 +94,20 @@ module.exports = grammar({
 
     uninterpreted: $ => /(.|\s)*/,
 
+    statement_list: $ => $.statements,
+
     statements: $ =>
       choice(
-        seq(
-          repeat1(choice(seq($.statement_, $._terminator), $.empty_statement)),
-          optional($.statement_)
-        ),
-        $.statement_
+        seq(repeat1(choice($.statement_, $.empty_statement)), optional($.statement)),
+        $.statement
       ),
 
     begin_block: $ => seq('BEGIN', '{', optional($.statements), '}'),
     end_block: $ => seq('END', '{', optional($.statements), '}'),
 
-    statement_: $ =>
+    statement_: $ => seq($.statement, $._terminator),
+
+    statement: $ =>
       choice(
         $.undef,
         $.alias,
@@ -235,35 +238,38 @@ module.exports = grammar({
     retry: $ => prec.left(seq('retry', optional($.argument_list))),
 
     if_modifier: $ =>
-      prec(PREC.RESCUE, seq(field('body', $.statement_), 'if', field('condition', $.expression_))),
+      prec(PREC.RESCUE, seq(field('body', $.statement), 'if', field('condition', $.expression_))),
 
     unless_modifier: $ =>
       prec(
         PREC.RESCUE,
-        seq(field('body', $.statement_), 'unless', field('condition', $.expression_))
+        seq(field('body', $.statement), 'unless', field('condition', $.expression_))
       ),
 
     while_modifier: $ =>
       prec(
         PREC.RESCUE,
-        seq(field('body', $.statement_), 'while', field('condition', $.expression_))
+        seq(field('body', $.statement), 'while', field('condition', $.expression_))
       ),
 
     until_modifier: $ =>
       prec(
         PREC.RESCUE,
-        seq(field('body', $.statement_), 'until', field('condition', $.expression_))
+        seq(field('body', $.statement), 'until', field('condition', $.expression_))
       ),
 
     rescue_modifier: $ =>
-      prec(
-        PREC.RESCUE,
-        seq(field('body', $.statement_), 'rescue', field('handler', $.expression_))
-      ),
+      prec(PREC.RESCUE, seq(field('body', $.statement), 'rescue', field('handler', $.expression_))),
 
-    while: $ => seq('while', field('condition', $.statement_), field('body', $.do)),
+    while: $ => $.while_clause,
 
-    until: $ => seq('until', field('condition', $.statement_), field('body', $.do)),
+    while_clause: $ => seq('while', alias($.statement, $.condition), field('body', $.do)),
+
+    until: $ => $.until_clause,
+
+    until_clause: $ => seq('until', alias($.statement, $.condition), field('body', $.do)),
+
+    for: $ => $.for_each_clause,
 
     for_each_clause: $ =>
       seq(
@@ -277,14 +283,14 @@ module.exports = grammar({
     do: $ =>
       seq(
         choice('do', $.terminator),
-        optional_with_placeholder('statement_or_block', $.statement_list),
+        optional_with_placeholder('statement_list', $.statement_list),
         'end'
       ),
 
     case: $ =>
       seq(
         'case',
-        field('value', optional($.statement_)),
+        field('value', optional($.statement)),
         optional($._terminator),
         repeat($.when),
         optional($.else_clause),
@@ -310,56 +316,57 @@ module.exports = grammar({
 
     else_if_clause_list: $ => repeat1($.else_if_clause),
 
-    if_clause: $ => seq('if', field('condition', $.statement_), $.then),
+    if_clause: $ => seq('if', field('condition', $.statement), $.then),
 
     unless: $ =>
       seq(
         'unless',
-        field('condition', $.statement_),
+        field('condition', $.statement),
         choice($._terminator, $.then),
         field('alternative', optional(choice($.else_clause, $.else_if_clause))),
         'end'
       ),
 
-    else_if_clause: $ => seq('elsif', field('condition', $.statement_), $.then),
+    else_if_clause: $ => seq('elsif', field('condition', $.statement), $.then),
 
     else_clause: $ =>
       seq(
         'else',
         optional($.terminator),
-        optional_with_placeholder('statement_or_block', $.statement_list)
+        optional_with_placeholder('statement_list', $.statement_list)
       ),
 
     then: $ =>
       choice(
         $.then_postfix,
-        seq($.terminator, optional_with_placeholder('statement_or_block', $.statement_list))
+        seq($.terminator, optional_with_placeholder('statement_list', $.statement_list))
       ),
 
     then_postfix: $ =>
       seq(
         optional($.terminator),
         'then',
-        optional_with_placeholder('statement_or_block', $.statement_list)
+        optional_with_placeholder('statement_list', $.statement_list)
       ),
 
-    begin_statement: $ =>
+    begin: $ =>
       seq(
-        $.begin,
+        $.begin_clause,
         optional_with_placeholder('rescue_else_ensure_list', $.rescue_else_ensure_list),
         'end'
       ),
 
-    begin: $ =>
+    begin_clause: $ =>
       seq(
         'begin',
         optional($.terminator),
         optional_with_placeholder('statement_list', $.statement_list)
       ),
 
-    ensure: $ => seq('ensure', optional_with_placeholder('statement_list', $.statement_list)),
+    ensure_clause: $ =>
+      seq('ensure', optional_with_placeholder('statement_list', $.statement_list)),
 
-    rescue: $ =>
+    rescue_clause: $ =>
       seq(
         'rescue',
         optional_with_placeholder('rescue_parameter_optional', $.rescue_parameter),
@@ -376,7 +383,7 @@ module.exports = grammar({
     body_end_: $ =>
       seq(optional_with_placeholder('rescue_else_ensure_list', $.rescue_else_ensure_list), 'end'),
 
-    rescue_else_ensure_list: $ => repeat1(choice($.rescue, $.else_clause, $.ensure)),
+    rescue_else_ensure_list: $ => repeat1(choice($.rescue_clause, $.else_clause, $.ensure_clause)),
 
     body_statement: $ =>
       seq(
@@ -387,15 +394,32 @@ module.exports = grammar({
 
     class_body_statement: $ =>
       seq(
-        optional_with_placeholder(
-          'class_member_list',
-          alias($.statement_list, $.class_member_list)
-        ),
+        optional_with_placeholder('class_member_list', $.class_member_list),
         optional_with_placeholder('rescue_else_ensure_list', $.rescue_else_ensure_list),
         'end'
       ),
 
-    statement_list: $ => $.statements,
+    class_member_list: $ => $.members,
+
+    members: $ =>
+      choice(
+        seq(repeat1(choice(seq($.member, $._terminator), $.empty_statement)), optional($.member)),
+        $.member
+      ),
+
+    member: $ =>
+      choice(
+        $.undef,
+        $.alias,
+        $.if_modifier,
+        $.unless_modifier,
+        $.while_modifier,
+        $.until_modifier,
+        $.rescue_modifier,
+        $.begin_block,
+        $.end_block,
+        $.expression_
+      ),
 
     // Method calls without parentheses (aka "command calls") are only allowed
     // in certain positions, like the top-level of a statement, the condition
@@ -416,7 +440,7 @@ module.exports = grammar({
       choice(
         alias($.command_binary, $.binary),
         alias($.command_unary, $.unary),
-        alias($.command_assignment, $.assignment_statement),
+        alias($.command_assignment, $.assignment),
         alias($.command_operator_assignment, $.operator_assignment),
         $.command_call,
         $.command_call_with_block,
@@ -431,7 +455,7 @@ module.exports = grammar({
     arg: $ =>
       choice(
         $.primary,
-        $.assignment_statement,
+        $.assignment,
         $.operator_assignment,
         $.conditional,
         $.range,
@@ -443,10 +467,10 @@ module.exports = grammar({
       choice(
         $.parenthesized_statements,
         $._lhs,
-        $.array,
+        $.list,
         $.string_array,
         $.symbol_array,
-        $.hash,
+        $.dictionary,
         $.subshell,
         $.simple_symbol,
         $.delimited_symbol,
@@ -464,12 +488,12 @@ module.exports = grammar({
         $.class,
         $.singleton_class,
         $.module,
-        $.begin_statement,
+        $.begin,
         $.while,
         $.until,
         $.if,
         $.unless,
-        $.for_each_clause,
+        $.for,
         $.case,
         $.return,
         $.yield,
@@ -530,7 +554,7 @@ module.exports = grammar({
         field('method_identifier', choice($._variable, $.scope_resolution))
       )
       const arguments = field('arguments', alias($.command_argument_list, $.argument_list))
-      const block = field('block', $.block)
+      const block = field('block', $.enclosed_body_)
       const doBlock = field('block', $.do_block)
       return choice(
         seq(receiver, prec(PREC.CURLY_BLOCK, seq(arguments, block))),
@@ -552,9 +576,9 @@ module.exports = grammar({
       )
       return choice(
         seq(receiver, $.arguments),
-        seq(receiver, prec(PREC.CURLY_BLOCK, seq($.arguments, $.block))),
+        seq(receiver, prec(PREC.CURLY_BLOCK, seq($.arguments, $.enclosed_body_))),
         seq(receiver, prec(PREC.DO_BLOCK, seq($.arguments, $.do_block))),
-        prec(PREC.CURLY_BLOCK, seq(receiver, $.block)),
+        prec(PREC.CURLY_BLOCK, seq(receiver, $.enclosed_body_)),
         prec(PREC.DO_BLOCK, seq(receiver, $.do_block))
       )
     },
@@ -587,18 +611,18 @@ module.exports = grammar({
         $.body_statement
       ),
 
-    block: $ =>
+    enclosed_body_: $ =>
       prec(
         PREC.CURLY_BLOCK,
         seq(
           '{',
           field('parameters', optional($.block_parameters)),
-          optional_with_placeholder('statement_list', $.statement_list),
+          optional_with_placeholder('statement_list_', alias($.statement_list, $.statement_list_)),
           '}'
         )
       ),
 
-    assignment_statement: $ =>
+    assignment: $ =>
       prec.right(
         PREC.ASSIGN,
         choice(
@@ -689,7 +713,7 @@ module.exports = grammar({
       ),
 
     range: $ => {
-      const begin = field('begin', $.arg)
+      const begin = field('begin_', $.arg)
       const end = field('end', $.arg)
       const operator = field('operator', choice('..', '...'))
       return prec.right(
@@ -960,9 +984,9 @@ module.exports = grammar({
         )
       ),
 
-    array: $ => seq('[', optional_with_placeholder('inner_list', $.inner_list), ']'),
+    list: $ => seq('[', optional_with_placeholder('inner_list', $.inner_list), ']'),
 
-    hash: $ =>
+    dictionary: $ =>
       seq('{', optional(seq(commaSep1(choice($.pair, $.hash_splat_argument)), optional(','))), '}'),
 
     pair: $ =>
@@ -990,7 +1014,7 @@ module.exports = grammar({
           alias($.parameter_list_block, $.lambda_parameters),
           optional_with_placeholder('paremeter_list', $.bare_parameters)
         ),
-        choice($.block, $.do_block)
+        choice($.enclosed_body_, $.do_block)
       ),
 
     empty_statement: $ => prec(-1, ';'),

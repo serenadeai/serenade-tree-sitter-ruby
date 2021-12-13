@@ -86,9 +86,9 @@ module.exports = grammar({
   supertypes: $ => [$._method_name, $._variable],
 
   rules: {
-    source_file: $ =>
+    program: $ =>
       seq(
-        optional_with_placeholder('statement_list', $.statement_list),
+        optional_with_placeholder('statement_list_', alias($.statement_list, $.statement_list_)),
         optional(seq('__END__', $._line_break, $.uninterpreted))
       ),
 

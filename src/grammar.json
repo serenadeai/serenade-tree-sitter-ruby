@@ -2,7 +2,7 @@
   "name": "ruby",
   "word": "identifier",
   "rules": {
-    "source_file": {
+    "program": {
       "type": "SEQ",
       "members": [
         {
@@ -10,15 +10,20 @@
           "members": [
             {
               "type": "FIELD",
-              "name": "statement_list",
+              "name": "statement_list_",
               "content": {
-                "type": "SYMBOL",
-                "name": "statement_list"
+                "type": "ALIAS",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "statement_list"
+                },
+                "named": true,
+                "value": "statement_list_"
               }
             },
             {
               "type": "FIELD",
-              "name": "statement_list",
+              "name": "statement_list_",
               "content": {
                 "type": "BLANK"
               }

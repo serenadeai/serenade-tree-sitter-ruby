@@ -2788,6 +2788,32 @@
     }
   },
   {
+    "type": "program",
+    "named": true,
+    "fields": {
+      "statement_list_": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "statement_list_",
+            "named": true
+          }
+        ]
+      }
+    },
+    "children": {
+      "multiple": false,
+      "required": false,
+      "types": [
+        {
+          "type": "uninterpreted",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "range",
     "named": true,
     "fields": {
@@ -3189,32 +3215,6 @@
       "types": [
         {
           "type": "method_rest",
-          "named": true
-        }
-      ]
-    }
-  },
-  {
-    "type": "source_file",
-    "named": true,
-    "fields": {
-      "statement_list": {
-        "multiple": false,
-        "required": false,
-        "types": [
-          {
-            "type": "statement_list",
-            "named": true
-          }
-        ]
-      }
-    },
-    "children": {
-      "multiple": false,
-      "required": false,
-      "types": [
-        {
-          "type": "uninterpreted",
           "named": true
         }
       ]

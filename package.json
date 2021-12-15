@@ -3,7 +3,10 @@
   "version": "0.19.0",
   "description": "Ruby grammar for tree-sitter",
   "main": "bindings/node",
-  "keywords": ["parser", "lexer"],
+  "keywords": [
+    "parser",
+    "lexer"
+  ],
   "author": "Rob Rix",
   "license": "MIT",
   "dependencies": {
@@ -26,7 +29,9 @@
   "tree-sitter": [
     {
       "scope": "source.ruby",
-      "file-types": ["rb"],
+      "file-types": [
+        "rb"
+      ],
       "injection-regex": "ruby"
     }
   ],

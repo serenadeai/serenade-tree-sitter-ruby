@@ -6,3 +6,4 @@ package-lock.json
 test.rb
 examples/ruby_spec
 /target/
+/prebuilds/

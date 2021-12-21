@@ -2825,11 +2825,11 @@
     }
   },
   {
-    "type": "rescue_else_ensure_list",
+    "type": "rescue_else_ensure_element",
     "named": true,
     "fields": {},
     "children": {
-      "multiple": true,
+      "multiple": false,
       "required": true,
       "types": [
         {
@@ -2842,6 +2842,21 @@
         },
         {
           "type": "rescue_clause",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "rescue_else_ensure_list",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "rescue_else_ensure_element",
           "named": true
         }
       ]

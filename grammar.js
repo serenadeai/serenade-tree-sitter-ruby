@@ -460,9 +460,10 @@ module.exports = grammar({
         'end'
       ),
 
-    rescue_else_ensure_list: $ =>
-      repeat1(choice($.rescue_clause, $.else_clause, $.ensure_clause)),
+    rescue_else_ensure_list: $ => repeat1($.rescue_else_ensure_element),
 
+    rescue_else_ensure_element: $ =>
+      choice($.rescue_clause, $.else_clause, $.ensure_clause),
     body_statement: $ =>
       seq(
         optional_with_placeholder('statement_list', $.statement_list),

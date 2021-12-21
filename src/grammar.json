@@ -2127,22 +2127,26 @@
     "rescue_else_ensure_list": {
       "type": "REPEAT1",
       "content": {
-        "type": "CHOICE",
-        "members": [
-          {
-            "type": "SYMBOL",
-            "name": "rescue_clause"
-          },
-          {
-            "type": "SYMBOL",
-            "name": "else_clause"
-          },
-          {
-            "type": "SYMBOL",
-            "name": "ensure_clause"
-          }
-        ]
+        "type": "SYMBOL",
+        "name": "rescue_else_ensure_element"
       }
+    },
+    "rescue_else_ensure_element": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "rescue_clause"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "else_clause"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "ensure_clause"
+        }
+      ]
     },
     "body_statement": {
       "type": "SEQ",

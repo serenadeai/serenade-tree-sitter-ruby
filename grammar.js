@@ -28,7 +28,8 @@ const PREC = {
 }
 
 const IDENTIFIER_CHARS = /[^\x00-\x1F\s:;`"'@$#.,|^&<=>+\-*/\\%?!~()\[\]{}]*/
-const LOWER_ALPHA_CHAR = /[^\x00-\x1F\sA-Z0-9:;`"'@$#.,|^&<=>+\-*/\\%?!~()\[\]{}]/
+const LOWER_ALPHA_CHAR =
+  /[^\x00-\x1F\sA-Z0-9:;`"'@$#.,|^&<=>+\-*/\\%?!~()\[\]{}]/
 const ALPHA_CHAR = /[^\x00-\x1F\s0-9:;`"'@$#.,|^&<=>+\-*/\\%?!~()\[\]{}]/
 
 module.exports = grammar({
@@ -369,6 +370,8 @@ module.exports = grammar({
         'end'
       ),
 
+    else_if_clause: $ => seq('elsif', field('condition', $.statement), $.then),
+
     else_if_clause_list: $ => repeat1($.else_if_clause),
 
     if_clause: $ => seq('if', field('condition', $.statement), $.then),
@@ -382,7 +385,8 @@ module.exports = grammar({
         'end'
       ),
 
-    else_if_clause: $ => seq('elsif', field('condition', $.statement), $.then),
+    else_clause_wrapper: $ =>
+      field('rescue_else_ensure_element', $.else_clause),
 
     else_clause: $ =>
       seq(
@@ -411,8 +415,16 @@ module.exports = grammar({
       seq(
         $.begin_clause,
         optional_with_placeholder(
-          'rescue_else_ensure_list',
-          $.rescue_else_ensure_list
+          'rescue_clause_list',
+          repeat1($.rescue_clause_wrapper)
+        ),
+        optional_with_placeholder(
+          'else_clause_list',
+          repeat1($.else_clause_wrapper)
+        ),
+        optional_with_placeholder(
+          'ensure_clause_list',
+          repeat1($.ensure_clause_wrapper)
         ),
         'end'
       ),
@@ -424,11 +436,17 @@ module.exports = grammar({
         optional_with_placeholder('statement_list', $.statement_list)
       ),
 
+    ensure_clause_wrapper: $ =>
+      field('rescue_else_ensure_element', $.ensure_clause),
+
     ensure_clause: $ =>
       seq(
         'ensure',
         optional_with_placeholder('statement_list', $.statement_list)
       ),
+
+    rescue_clause_wrapper: $ =>
+      field('rescue_else_ensure_element', $.rescue_clause),
 
     rescue_clause: $ =>
       seq(
@@ -451,25 +469,23 @@ module.exports = grammar({
 
     exception_variable: $ => seq('=>', $.lhs_),
 
-    body_end_: $ =>
-      seq(
-        optional_with_placeholder(
-          'rescue_else_ensure_list',
-          $.rescue_else_ensure_list
-        ),
-        'end'
-      ),
-
-    rescue_else_ensure_list: $ => repeat1($.rescue_else_ensure_element),
-
     rescue_else_ensure_element: $ =>
-      choice($.rescue_clause, $.else_clause, $.ensure_clause),
+      choice($.rescue_clause_wrapper, $.else_clause, $.ensure_clause_wrapper),
+
     body_statement: $ =>
       seq(
         optional_with_placeholder('statement_list', $.statement_list),
         optional_with_placeholder(
-          'rescue_else_ensure_list',
-          $.rescue_else_ensure_list
+          'rescue_clause_list',
+          repeat1($.rescue_clause_wrapper)
+        ),
+        optional_with_placeholder(
+          'else_clause_list',
+          repeat1($.else_clause_wrapper)
+        ),
+        optional_with_placeholder(
+          'ensure_clause_list',
+          repeat1($.ensure_clause_wrapper)
         ),
         'end'
       ),
@@ -478,8 +494,16 @@ module.exports = grammar({
       seq(
         optional_with_placeholder('class_member_list', $.class_member_list),
         optional_with_placeholder(
-          'rescue_else_ensure_list',
-          $.rescue_else_ensure_list
+          'rescue_clause_list',
+          repeat1($.rescue_clause_wrapper)
+        ),
+        optional_with_placeholder(
+          'else_clause_list',
+          repeat1($.else_clause_wrapper)
+        ),
+        optional_with_placeholder(
+          'ensure_clause_list',
+          repeat1($.ensure_clause_wrapper)
         ),
         'end'
       ),

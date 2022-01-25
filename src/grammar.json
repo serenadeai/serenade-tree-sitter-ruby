@@ -1653,6 +1653,27 @@
         }
       ]
     },
+    "else_if_clause": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "STRING",
+          "value": "elsif"
+        },
+        {
+          "type": "FIELD",
+          "name": "condition",
+          "content": {
+            "type": "SYMBOL",
+            "name": "statement"
+          }
+        },
+        {
+          "type": "SYMBOL",
+          "name": "then"
+        }
+      ]
+    },
     "else_if_clause_list": {
       "type": "REPEAT1",
       "content": {
@@ -1736,26 +1757,13 @@
         }
       ]
     },
-    "else_if_clause": {
-      "type": "SEQ",
-      "members": [
-        {
-          "type": "STRING",
-          "value": "elsif"
-        },
-        {
-          "type": "FIELD",
-          "name": "condition",
-          "content": {
-            "type": "SYMBOL",
-            "name": "statement"
-          }
-        },
-        {
-          "type": "SYMBOL",
-          "name": "then"
-        }
-      ]
+    "else_clause_wrapper": {
+      "type": "FIELD",
+      "name": "rescue_else_ensure_element",
+      "content": {
+        "type": "SYMBOL",
+        "name": "else_clause"
+      }
     },
     "else_clause": {
       "type": "SEQ",
@@ -1889,15 +1897,64 @@
           "members": [
             {
               "type": "FIELD",
-              "name": "rescue_else_ensure_list",
+              "name": "rescue_clause_list",
               "content": {
-                "type": "SYMBOL",
-                "name": "rescue_else_ensure_list"
+                "type": "REPEAT1",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "rescue_clause_wrapper"
+                }
               }
             },
             {
               "type": "FIELD",
-              "name": "rescue_else_ensure_list",
+              "name": "rescue_clause_list",
+              "content": {
+                "type": "BLANK"
+              }
+            }
+          ]
+        },
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "FIELD",
+              "name": "else_clause_list",
+              "content": {
+                "type": "REPEAT1",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "else_clause_wrapper"
+                }
+              }
+            },
+            {
+              "type": "FIELD",
+              "name": "else_clause_list",
+              "content": {
+                "type": "BLANK"
+              }
+            }
+          ]
+        },
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "FIELD",
+              "name": "ensure_clause_list",
+              "content": {
+                "type": "REPEAT1",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "ensure_clause_wrapper"
+                }
+              }
+            },
+            {
+              "type": "FIELD",
+              "name": "ensure_clause_list",
               "content": {
                 "type": "BLANK"
               }
@@ -1951,6 +2008,14 @@
         }
       ]
     },
+    "ensure_clause_wrapper": {
+      "type": "FIELD",
+      "name": "rescue_else_ensure_element",
+      "content": {
+        "type": "SYMBOL",
+        "name": "ensure_clause"
+      }
+    },
     "ensure_clause": {
       "type": "SEQ",
       "members": [
@@ -1979,6 +2044,14 @@
           ]
         }
       ]
+    },
+    "rescue_clause_wrapper": {
+      "type": "FIELD",
+      "name": "rescue_else_ensure_element",
+      "content": {
+        "type": "SYMBOL",
+        "name": "rescue_clause"
+      }
     },
     "rescue_clause": {
       "type": "SEQ",
@@ -2095,48 +2168,12 @@
         }
       ]
     },
-    "body_end_": {
-      "type": "SEQ",
-      "members": [
-        {
-          "type": "CHOICE",
-          "members": [
-            {
-              "type": "FIELD",
-              "name": "rescue_else_ensure_list",
-              "content": {
-                "type": "SYMBOL",
-                "name": "rescue_else_ensure_list"
-              }
-            },
-            {
-              "type": "FIELD",
-              "name": "rescue_else_ensure_list",
-              "content": {
-                "type": "BLANK"
-              }
-            }
-          ]
-        },
-        {
-          "type": "STRING",
-          "value": "end"
-        }
-      ]
-    },
-    "rescue_else_ensure_list": {
-      "type": "REPEAT1",
-      "content": {
-        "type": "SYMBOL",
-        "name": "rescue_else_ensure_element"
-      }
-    },
     "rescue_else_ensure_element": {
       "type": "CHOICE",
       "members": [
         {
           "type": "SYMBOL",
-          "name": "rescue_clause"
+          "name": "rescue_clause_wrapper"
         },
         {
           "type": "SYMBOL",
@@ -2144,7 +2181,7 @@
         },
         {
           "type": "SYMBOL",
-          "name": "ensure_clause"
+          "name": "ensure_clause_wrapper"
         }
       ]
     },
@@ -2176,15 +2213,64 @@
           "members": [
             {
               "type": "FIELD",
-              "name": "rescue_else_ensure_list",
+              "name": "rescue_clause_list",
               "content": {
-                "type": "SYMBOL",
-                "name": "rescue_else_ensure_list"
+                "type": "REPEAT1",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "rescue_clause_wrapper"
+                }
               }
             },
             {
               "type": "FIELD",
-              "name": "rescue_else_ensure_list",
+              "name": "rescue_clause_list",
+              "content": {
+                "type": "BLANK"
+              }
+            }
+          ]
+        },
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "FIELD",
+              "name": "else_clause_list",
+              "content": {
+                "type": "REPEAT1",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "else_clause_wrapper"
+                }
+              }
+            },
+            {
+              "type": "FIELD",
+              "name": "else_clause_list",
+              "content": {
+                "type": "BLANK"
+              }
+            }
+          ]
+        },
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "FIELD",
+              "name": "ensure_clause_list",
+              "content": {
+                "type": "REPEAT1",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "ensure_clause_wrapper"
+                }
+              }
+            },
+            {
+              "type": "FIELD",
+              "name": "ensure_clause_list",
               "content": {
                 "type": "BLANK"
               }
@@ -2225,15 +2311,64 @@
           "members": [
             {
               "type": "FIELD",
-              "name": "rescue_else_ensure_list",
+              "name": "rescue_clause_list",
               "content": {
-                "type": "SYMBOL",
-                "name": "rescue_else_ensure_list"
+                "type": "REPEAT1",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "rescue_clause_wrapper"
+                }
               }
             },
             {
               "type": "FIELD",
-              "name": "rescue_else_ensure_list",
+              "name": "rescue_clause_list",
+              "content": {
+                "type": "BLANK"
+              }
+            }
+          ]
+        },
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "FIELD",
+              "name": "else_clause_list",
+              "content": {
+                "type": "REPEAT1",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "else_clause_wrapper"
+                }
+              }
+            },
+            {
+              "type": "FIELD",
+              "name": "else_clause_list",
+              "content": {
+                "type": "BLANK"
+              }
+            }
+          ]
+        },
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "FIELD",
+              "name": "ensure_clause_list",
+              "content": {
+                "type": "REPEAT1",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "ensure_clause_wrapper"
+                }
+              }
+            },
+            {
+              "type": "FIELD",
+              "name": "ensure_clause_list",
               "content": {
                 "type": "BLANK"
               }

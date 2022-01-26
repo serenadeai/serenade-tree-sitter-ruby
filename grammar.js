@@ -36,7 +36,7 @@ module.exports = grammar({
   name: 'ruby',
 
   externals: $ => [
-    $._line_break,
+    $.line_break,
 
     // Delimited literals
     $.simple_symbol,
@@ -71,28 +71,30 @@ module.exports = grammar({
 
   word: $ => $.identifier,
 
-  supertypes: $ => [$._method_name, $._variable],
+  supertypes: $ => [],
 
   rules: {
     program: $ =>
       seq(
-        optional($._statements),
-        optional(seq('__END__', $._line_break, $.uninterpreted))
+        optional_with_placeholder('statement_list', $.statement_list),
+        optional(seq('__END__', $.line_break, $.uninterpreted))
       ),
 
     uninterpreted: $ => /(.|\s)*/,
 
-    _statements: $ =>
+    enclosed_body: $ => $.statement_list,
+
+    statement_list: $ =>
       choice(
         seq(
-          repeat1(choice(seq($.statement, $._terminator), $.empty_statement)),
+          repeat1(choice(seq($.statement, $.terminator_), $.empty_statement)),
           optional($.statement)
         ),
         $.statement
       ),
 
-    begin_block: $ => seq('BEGIN', '{', optional($._statements), '}'),
-    end_block: $ => seq('END', '{', optional($._statements), '}'),
+    begin_block: $ => seq('BEGIN', '{', optional($.statement_list), '}'),
+    end_block: $ => seq('END', '{', optional($.statement_list), '}'),
 
     statement: $ =>
       choice(
@@ -108,34 +110,28 @@ module.exports = grammar({
         $.expression_
       ),
 
-    method: $ => seq('def', $._method_rest),
+    method: $ => seq('def', $.method_rest_),
 
     singleton_method: $ =>
       seq(
         'def',
-        seq(
-          choice(
-            field('object', $._variable),
-            seq('(', field('object', $.arg), ')')
-          ),
-          choice('.', '::')
-        ),
-        $._method_rest
+        seq(choice($.variable_, seq('(', $.arg, ')')), choice('.', '::')),
+        $.method_rest_
       ),
 
-    _method_rest: $ =>
+    method_rest_: $ =>
       seq(
-        field('name', $._method_name),
+        alias($.method_name_, $.identifier),
         choice(
           seq(
             field('parameters', alias($.parameters, $.method_parameters)),
-            optional($._terminator)
+            optional($.terminator_)
           ),
           seq(
             optional(
               field('parameters', alias($.bare_parameters, $.method_parameters))
             ),
-            $._terminator
+            $.terminator_
           )
         ),
         $._body_statement
@@ -193,7 +189,7 @@ module.exports = grammar({
         'class',
         field('name', choice($.constant, $.scope_resolution)),
         field('superclass', optional($.superclass)),
-        $._terminator,
+        $.terminator_,
         $._body_statement
       ),
 
@@ -204,7 +200,7 @@ module.exports = grammar({
         'class',
         alias($._singleton_class_left_angle_left_langle, '<<'),
         field('value', $.arg),
-        $._terminator,
+        $.terminator_,
         $._body_statement
       ),
 
@@ -212,7 +208,7 @@ module.exports = grammar({
       seq(
         'module',
         field('name', choice($.constant, $.scope_resolution)),
-        choice(seq($._terminator, $._body_statement), 'end')
+        choice(seq($.terminator_, $._body_statement), 'end')
       ),
 
     return_command: $ =>
@@ -291,13 +287,18 @@ module.exports = grammar({
       ),
 
     in: $ => seq('in', $.arg),
-    do: $ => seq(choice('do', $._terminator), optional($._statements), 'end'),
+    do: $ =>
+      seq(
+        choice('do', $.terminator_),
+        optional_with_placeholder('statement_list', $.statement_list),
+        'end'
+      ),
 
     case: $ =>
       seq(
         'case',
         field('value', optional($.statement)),
-        optional($._terminator),
+        optional($.terminator_),
         repeat($.when),
         optional($.else),
         'end'
@@ -307,7 +308,7 @@ module.exports = grammar({
       seq(
         'when',
         commaSep1(field('pattern', $.pattern)),
-        choice($._terminator, field('body', $.then))
+        choice($.terminator_, field('body', $.then))
       ),
 
     pattern: $ => choice($.arg, $.splat_argument),
@@ -316,7 +317,7 @@ module.exports = grammar({
       seq(
         'if',
         field('condition', $.statement),
-        choice($._terminator, field('consequence', $.then)),
+        choice($.terminator_, field('consequence', $.then)),
         field('alternative', optional(choice($.else, $.elsif))),
         'end'
       ),
@@ -325,7 +326,7 @@ module.exports = grammar({
       seq(
         'unless',
         field('condition', $.statement),
-        choice($._terminator, field('consequence', $.then)),
+        choice($.terminator_, field('consequence', $.then)),
         field('alternative', optional(choice($.else, $.elsif))),
         'end'
       ),
@@ -334,28 +335,42 @@ module.exports = grammar({
       seq(
         'elsif',
         field('condition', $.statement),
-        choice($._terminator, field('consequence', $.then)),
+        choice($.terminator_, field('consequence', $.then)),
         field('alternative', optional(choice($.else, $.elsif)))
       ),
 
-    else: $ => seq('else', optional($._terminator), optional($._statements)),
-
-    then: $ =>
-      choice(
-        seq($._terminator, $._statements),
-        seq(optional($._terminator), 'then', optional($._statements))
+    else: $ =>
+      seq(
+        'else',
+        optional($.terminator_),
+        optional_with_placeholder('statement_list', $.statement_list)
       ),
 
-    begin: $ => seq('begin', optional($._terminator), $._body_statement),
+    then_implicit_: $ => seq($.terminator_, $.statement_list),
 
-    ensure: $ => seq('ensure', optional($._statements)),
+    then_separated_: $ =>
+      seq(
+        optional($.terminator_),
+        'then',
+        optional_with_placeholder('statement_list', $.statement_list)
+      ),
+
+    then: $ => choice($.then_implicit_, $.then_separated_),
+
+    begin: $ => seq('begin', optional($.terminator_), $._body_statement),
+
+    ensure: $ =>
+      seq(
+        'ensure',
+        optional_with_placeholder('statement_list', $.statement_list)
+      ),
 
     rescue: $ =>
       seq(
         'rescue',
         field('exceptions', optional($.exceptions)),
         field('variable', optional($.exception_variable)),
-        choice($._terminator, field('body', $.then))
+        choice($.terminator_, field('body', $.then))
       ),
 
     exceptions: $ => commaSep1(choice($.arg, $.splat_argument)),
@@ -364,7 +379,7 @@ module.exports = grammar({
 
     _body_statement: $ =>
       seq(
-        optional($._statements),
+        optional_with_placeholder('statement_list', $.statement_list),
         repeat(choice($.rescue, $.else, $.ensure)),
         'end'
       ),
@@ -454,7 +469,12 @@ module.exports = grammar({
         $.heredoc_beginning
       ),
 
-    parenthesized_statements: $ => seq('(', optional($._statements), ')'),
+    parenthesized_statements: $ =>
+      seq(
+        '(',
+        optional_with_placeholder('statement_list', $.statement_list),
+        ')'
+      ),
 
     element_reference: $ =>
       prec.left(
@@ -494,7 +514,7 @@ module.exports = grammar({
         choice(
           $.call_expression_,
           $._chained_command_call,
-          field('method', choice($._variable, $.scope_resolution))
+          field('method', choice($.variable_, $.scope_resolution))
         ),
         field('arguments', alias($.command_argument_list, $.arguments))
       ),
@@ -502,7 +522,7 @@ module.exports = grammar({
     command_call_with_block: $ => {
       const receiver = choice(
         $.call_expression_,
-        field('method', choice($._variable, $.scope_resolution))
+        field('method', choice($.variable_, $.scope_resolution))
       )
       const arguments = field(
         'arguments',
@@ -529,7 +549,7 @@ module.exports = grammar({
     call: $ => {
       const receiver = choice(
         $.call_expression_,
-        field('method', choice($._variable, $.scope_resolution))
+        field('method', choice($.variable_, $.scope_resolution))
       )
       const arguments = field('arguments', $.arguments)
       const block = field('block', $.enclosed_body_)
@@ -575,9 +595,9 @@ module.exports = grammar({
     do_block: $ =>
       seq(
         'do',
-        optional($._terminator),
+        optional($.terminator_),
         optional(
-          seq(field('parameters', $.block_parameters), optional($._terminator))
+          seq(field('parameters', $.block_parameters), optional($.terminator_))
         ),
         $._body_statement
       ),
@@ -588,7 +608,7 @@ module.exports = grammar({
         seq(
           '{',
           field('parameters', optional($.block_parameters)),
-          optional($._statements),
+          optional_with_placeholder('statement_list', $.statement_list),
           '}'
         )
       ),
@@ -820,7 +840,7 @@ module.exports = grammar({
     lhs_: $ =>
       prec.left(
         choice(
-          $._variable,
+          $.variable_,
           $.true,
           $.false,
           $.nil_,
@@ -831,7 +851,7 @@ module.exports = grammar({
         )
       ),
 
-    _variable: $ =>
+    variable_: $ =>
       prec.right(
         choice(
           $.self,
@@ -876,7 +896,7 @@ module.exports = grammar({
         '`'
       ),
 
-    _method_name: $ =>
+    method_name_: $ =>
       choice(
         $.identifier,
         $.constant,
@@ -890,12 +910,12 @@ module.exports = grammar({
       ),
     setter: $ => seq(field('name', $.identifier), '='),
 
-    undef: $ => seq('undef', commaSep1($._method_name)),
+    undef: $ => seq('undef', commaSep1($.method_name_)),
     alias: $ =>
       seq(
         'alias',
-        field('name', $._method_name),
-        field('alias', $._method_name)
+        field('name', $.method_name_),
+        field('alias', $.method_name_)
       ),
 
     comment: $ =>
@@ -937,7 +957,7 @@ module.exports = grammar({
 
     character: $ => /\?(\\\S({[0-9A-Fa-f]*}|[0-9A-Fa-f]*|-\S([MC]-\S)?)?|\S)/,
 
-    interpolation: $ => seq('#{', optional($._statements), '}'),
+    interpolation: $ => seq('#{', optional($.statement_list), '}'),
 
     string: $ =>
       seq(
@@ -1056,7 +1076,7 @@ module.exports = grammar({
 
     empty_statement: $ => prec(-1, ';'),
 
-    _terminator: $ => choice($._line_break, ';'),
+    terminator_: $ => choice($.line_break, ';'),
   },
 })
 

@@ -241,6 +241,22 @@ module.exports = grammar({
       prec.left(seq('break', alias($.command_argument_list, $.argument_list))),
     next_command: $ =>
       prec.left(seq('next', alias($.command_argument_list, $.argument_list))),
+    raise_command: $ =>
+      prec.left(seq('raise', alias($.command_argument_list, $.argument_list))),
+    throw_command: $ =>
+      prec.left(seq('throw', alias($.command_argument_list, $.argument_list))),
+    require_command: $ =>
+      prec.left(
+        seq('require', alias($.command_argument_list, $.argument_list))
+      ),
+    require_relative_command: $ =>
+      prec.left(
+        seq('require_relative', alias($.command_argument_list, $.argument_list))
+      ),
+    include_command: $ =>
+      prec.left(
+        seq('include', alias($.command_argument_list, $.argument_list))
+      ),
     return: $ =>
       prec.left(
         seq(
@@ -256,6 +272,12 @@ module.exports = grammar({
     next: $ => prec.left(seq('next', optional($.arguments))),
     redo: $ => prec.left(seq('redo', optional($.arguments))),
     retry: $ => prec.left(seq('retry', optional($.arguments))),
+    throw: $ => prec.left(seq('throw', optional($.arguments))),
+    raise: $ => prec.left(seq('raise', optional($.arguments))),
+    require: $ => prec.left(seq('require', optional($.arguments))),
+    require_relative: $ =>
+      prec.left(seq('require_relative', optional($.arguments))),
+    include: $ => prec.left(seq('include', optional($.arguments))),
 
     if_modifier: $ =>
       prec(
@@ -518,6 +540,11 @@ module.exports = grammar({
     // This naming convention is based on Ruby's standard grammar.
     expression_: $ =>
       choice(
+        alias($.throw_command, $.throw),
+        alias($.raise_command, $.raise),
+        alias($.require_command, $.require),
+        alias($.require_relative_command, $.require_relative),
+        alias($.include_command, $.include),
         alias($.command_binary, $.binary),
         alias($.command_unary, $.unary),
         alias($.command_assignment, $.assignment),
@@ -550,6 +577,11 @@ module.exports = grammar({
 
     primary: $ =>
       choice(
+        $.throw,
+        $.raise,
+        $.require,
+        $.require_relative,
+        $.include,
         $.parenthesized_statements,
         $.lhs_,
         $.list,

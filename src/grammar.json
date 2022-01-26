@@ -1001,6 +1001,116 @@
         ]
       }
     },
+    "raise_command": {
+      "type": "PREC_LEFT",
+      "value": 0,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "STRING",
+            "value": "raise"
+          },
+          {
+            "type": "ALIAS",
+            "content": {
+              "type": "SYMBOL",
+              "name": "command_argument_list"
+            },
+            "named": true,
+            "value": "argument_list"
+          }
+        ]
+      }
+    },
+    "throw_command": {
+      "type": "PREC_LEFT",
+      "value": 0,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "STRING",
+            "value": "throw"
+          },
+          {
+            "type": "ALIAS",
+            "content": {
+              "type": "SYMBOL",
+              "name": "command_argument_list"
+            },
+            "named": true,
+            "value": "argument_list"
+          }
+        ]
+      }
+    },
+    "require_command": {
+      "type": "PREC_LEFT",
+      "value": 0,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "STRING",
+            "value": "require"
+          },
+          {
+            "type": "ALIAS",
+            "content": {
+              "type": "SYMBOL",
+              "name": "command_argument_list"
+            },
+            "named": true,
+            "value": "argument_list"
+          }
+        ]
+      }
+    },
+    "require_relative_command": {
+      "type": "PREC_LEFT",
+      "value": 0,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "STRING",
+            "value": "require_relative"
+          },
+          {
+            "type": "ALIAS",
+            "content": {
+              "type": "SYMBOL",
+              "name": "command_argument_list"
+            },
+            "named": true,
+            "value": "argument_list"
+          }
+        ]
+      }
+    },
+    "include_command": {
+      "type": "PREC_LEFT",
+      "value": 0,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "STRING",
+            "value": "include"
+          },
+          {
+            "type": "ALIAS",
+            "content": {
+              "type": "SYMBOL",
+              "name": "command_argument_list"
+            },
+            "named": true,
+            "value": "argument_list"
+          }
+        ]
+      }
+    },
     "return": {
       "type": "PREC_LEFT",
       "value": 0,
@@ -1148,6 +1258,131 @@
           {
             "type": "STRING",
             "value": "retry"
+          },
+          {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "arguments"
+              },
+              {
+                "type": "BLANK"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "throw": {
+      "type": "PREC_LEFT",
+      "value": 0,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "STRING",
+            "value": "throw"
+          },
+          {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "arguments"
+              },
+              {
+                "type": "BLANK"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "raise": {
+      "type": "PREC_LEFT",
+      "value": 0,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "STRING",
+            "value": "raise"
+          },
+          {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "arguments"
+              },
+              {
+                "type": "BLANK"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "require": {
+      "type": "PREC_LEFT",
+      "value": 0,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "STRING",
+            "value": "require"
+          },
+          {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "arguments"
+              },
+              {
+                "type": "BLANK"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "require_relative": {
+      "type": "PREC_LEFT",
+      "value": 0,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "STRING",
+            "value": "require_relative"
+          },
+          {
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "arguments"
+              },
+              {
+                "type": "BLANK"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "include": {
+      "type": "PREC_LEFT",
+      "value": 0,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "STRING",
+            "value": "include"
           },
           {
             "type": "CHOICE",
@@ -2417,6 +2652,51 @@
           "type": "ALIAS",
           "content": {
             "type": "SYMBOL",
+            "name": "throw_command"
+          },
+          "named": true,
+          "value": "throw"
+        },
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
+            "name": "raise_command"
+          },
+          "named": true,
+          "value": "raise"
+        },
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
+            "name": "require_command"
+          },
+          "named": true,
+          "value": "require"
+        },
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
+            "name": "require_relative_command"
+          },
+          "named": true,
+          "value": "require_relative"
+        },
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
+            "name": "include_command"
+          },
+          "named": true,
+          "value": "include"
+        },
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
             "name": "command_binary"
           },
           "named": true,
@@ -2557,6 +2837,26 @@
     "primary": {
       "type": "CHOICE",
       "members": [
+        {
+          "type": "SYMBOL",
+          "name": "throw"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "raise"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "require"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "require_relative"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "include"
+        },
         {
           "type": "SYMBOL",
           "name": "parenthesized_statements"

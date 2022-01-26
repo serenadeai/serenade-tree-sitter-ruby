@@ -908,15 +908,12 @@ module.exports = grammar({
       ))));
     }, 
 
-    command_binary: $ =>
-      prec.left(
-        seq(
-          field('left', $.expression_),
-          field('operator', choice('or', 'and')),
-          field('right', $.expression_)
-        )
-      ),
-
+    command_binary: $ => prec.left(seq(
+      field('left', $._expression),
+      field('operator', choice('or', 'and')),
+      field('right', $._expression)
+    )),
+ 
     unary: $ => {
       const operators = [
         [prec, PREC.DEFINED, 'defined?'],

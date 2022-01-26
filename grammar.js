@@ -901,19 +901,12 @@ module.exports = grammar({
         [prec.right, PREC.EXPONENTIAL, alias($._binary_star_star, '**')],
       ]
 
-      return choice(
-        ...operators.map(([fn, precedence, operator]) =>
-          fn(
-            precedence,
-            seq(
-              field('left', $.arg),
-              field('operator', operator),
-              field('right', $.arg)
-            )
-          )
-        )
-      )
-    },
+      return choice(...operators.map(([fn, precedence, operator]) => fn(precedence, seq(
+        field('left', $._arg),
+        field('operator', operator),
+        field('right', $._arg)
+      ))));
+    }, 
 
     command_binary: $ =>
       prec.left(

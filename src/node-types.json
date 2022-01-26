@@ -1568,6 +1568,10 @@
           "named": true
         },
         {
+          "type": "include",
+          "named": true
+        },
+        {
           "type": "next",
           "named": true
         },
@@ -1576,7 +1580,23 @@
           "named": true
         },
         {
+          "type": "raise",
+          "named": true
+        },
+        {
+          "type": "require",
+          "named": true
+        },
+        {
+          "type": "require_relative",
+          "named": true
+        },
+        {
           "type": "return",
+          "named": true
+        },
+        {
+          "type": "throw",
           "named": true
         },
         {
@@ -1634,6 +1654,10 @@
           "named": true
         },
         {
+          "type": "include",
+          "named": true
+        },
+        {
           "type": "next",
           "named": true
         },
@@ -1642,7 +1666,23 @@
           "named": true
         },
         {
+          "type": "raise",
+          "named": true
+        },
+        {
+          "type": "require",
+          "named": true
+        },
+        {
+          "type": "require_relative",
+          "named": true
+        },
+        {
           "type": "return",
+          "named": true
+        },
+        {
+          "type": "throw",
           "named": true
         },
         {
@@ -1907,6 +1947,25 @@
       "types": [
         {
           "type": "block_collection",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "include",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": false,
+      "types": [
+        {
+          "type": "argument_list",
+          "named": true
+        },
+        {
+          "type": "arguments",
           "named": true
         }
       ]
@@ -2704,6 +2763,10 @@
           "named": true
         },
         {
+          "type": "include",
+          "named": true
+        },
+        {
           "type": "integer",
           "named": true
         },
@@ -2740,6 +2803,10 @@
           "named": true
         },
         {
+          "type": "raise",
+          "named": true
+        },
+        {
           "type": "rational",
           "named": true
         },
@@ -2749,6 +2816,14 @@
         },
         {
           "type": "regex",
+          "named": true
+        },
+        {
+          "type": "require",
+          "named": true
+        },
+        {
+          "type": "require_relative",
           "named": true
         },
         {
@@ -2785,6 +2860,10 @@
         },
         {
           "type": "symbol_array",
+          "named": true
+        },
+        {
+          "type": "throw",
           "named": true
         },
         {
@@ -2835,6 +2914,25 @@
         },
         {
           "type": "uninterpreted",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "raise",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": false,
+      "types": [
+        {
+          "type": "argument_list",
+          "named": true
+        },
+        {
+          "type": "arguments",
           "named": true
         }
       ]
@@ -2932,6 +3030,44 @@
         },
         {
           "type": "string_content",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "require",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": false,
+      "types": [
+        {
+          "type": "argument_list",
+          "named": true
+        },
+        {
+          "type": "arguments",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "require_relative",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": false,
+      "types": [
+        {
+          "type": "argument_list",
+          "named": true
+        },
+        {
+          "type": "arguments",
           "named": true
         }
       ]
@@ -3509,6 +3645,25 @@
       "types": [
         {
           "type": "terminator_",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "throw",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": false,
+      "types": [
+        {
+          "type": "argument_list",
+          "named": true
+        },
+        {
+          "type": "arguments",
           "named": true
         }
       ]
@@ -4256,6 +4411,10 @@
     "named": false
   },
   {
+    "type": "include",
+    "named": false
+  },
+  {
     "type": "instance_variable",
     "named": true
   },
@@ -4292,7 +4451,19 @@
     "named": false
   },
   {
+    "type": "raise",
+    "named": false
+  },
+  {
     "type": "redo",
+    "named": false
+  },
+  {
+    "type": "require",
+    "named": false
+  },
+  {
+    "type": "require_relative",
     "named": false
   },
   {
@@ -4325,6 +4496,10 @@
   },
   {
     "type": "then",
+    "named": false
+  },
+  {
+    "type": "throw",
     "named": false
   },
   {

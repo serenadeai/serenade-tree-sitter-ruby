@@ -207,10 +207,7 @@ module.exports = grammar({
         $.class_body_statement
       ),
 
-    // TODO: ^ why is the above a class_body_statement?
-
     extends_optional: $ => seq('<', alias($.expression_, $.extends_type)),
-    // superclass: $ => seq('<', $.expression_),
 
     singleton_class: $ =>
       seq(

@@ -903,7 +903,7 @@ module.exports = grammar({
 
       return choice(...operators.map(([fn, precedence, operator]) => fn(precedence, seq(
         field('left', $._arg),
-        field('operator', operator),
+        field('operator', operator), 
         field('right', $._arg)
       ))));
     }, 

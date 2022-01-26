@@ -90,32 +90,25 @@ module.exports = grammar({
   rules: {
     program: $ =>
       seq(
-        optional_with_placeholder(
-          'statement_list_',
-          alias($.statement_list, $.statement_list_)
-        ),
+        optional($._statements),
         optional(seq('__END__', $._line_break, $.uninterpreted))
       ),
 
     uninterpreted: $ => /(.|\s)*/,
 
-    statement_list: $ => $.statements,
-
-    statements: $ =>
+    _statements: $ =>
       choice(
         seq(
-          repeat1(choice($.statement_, $.empty_statement)),
-          optional($.statement)
+          repeat1(choice(seq($._statement, $._terminator), $.empty_statement)),
+          optional($._statement)
         ),
-        $.statement
+        $._statement
       ),
 
-    begin_block: $ => seq('BEGIN', '{', optional($.statements), '}'),
-    end_block: $ => seq('END', '{', optional($.statements), '}'),
+    begin_block: $ => seq('BEGIN', '{', optional($._statements), '}'),
+    end_block: $ => seq('END', '{', optional($._statements), '}'),
 
-    statement_: $ => seq($.statement, $._terminator),
-
-    statement: $ =>
+    _statement: $ =>
       choice(
         $.undef,
         $.alias,
@@ -126,10 +119,8 @@ module.exports = grammar({
         $.rescue_modifier,
         $.begin_block,
         $.end_block,
-        $.expression_
+        $._expression
       ),
-
-    method: $ => seq('def', $.method_rest),
 
     singleton_method: $ =>
       seq(
@@ -138,70 +129,68 @@ module.exports = grammar({
         $.method_rest
       ),
 
-    method_rest: $ =>
+    singleton_method: $ =>
       seq(
-        alias($._method_name, $.identifier),
-        choice(
-          prec.dynamic(
-            1,
-            seq(
-              alias($.parameter_list_block, $.parameter_list_optional),
-              optional($.terminator)
-            )
+        'def',
+        seq(
+          choice(
+            field('object', $._variable),
+            seq('(', field('object', $._arg), ')')
           ),
-          $.bare_parameters_with_terminator
+          choice('.', '::')
         ),
-        $.body_statement
+        $._method_rest
       ),
 
-    parameter_list_block: $ =>
+    _method_rest: $ =>
       seq(
-        '(',
-        optional_with_placeholder('parameter_list', commaSep($.parameter)),
-        ')'
+        field('name', $._method_name),
+        choice(
+          seq(
+            field('parameters', alias($.parameters, $.method_parameters)),
+            optional($._terminator)
+          ),
+          seq(
+            optional(
+              field('parameters', alias($.bare_parameters, $.method_parameters))
+            ),
+            $._terminator
+          )
+        ),
+        $._body_statement
       ),
 
-    bare_parameters_with_terminator: $ =>
-      seq(
-        optional_with_placeholder(
-          'parameter_list_optional',
-          alias($.bare_parameters, $.parameter_list)
-        ),
-        $.terminator
-      ),
+    parameters: $ => seq('(', commaSep($._formal_parameter), ')'),
 
     bare_parameters: $ =>
-      seq($.simple_formal_parameter_, repeat(seq(',', $.parameter))),
+      seq($._simple_formal_parameter, repeat(seq(',', $._formal_parameter))),
 
     block_parameters: $ =>
       seq(
         '|',
-        seq(commaSep($.parameter), optional(',')),
+        seq(commaSep($._formal_parameter), optional(',')),
         optional(seq(';', sep1($.identifier, ','))), // Block shadow args e.g. {|; a, b| ...}
         '|'
       ),
 
-    parameter: $ =>
+    _formal_parameter: $ =>
       choice(
-        $.simple_formal_parameter_,
-        alias($.parameter_list_block, $.destructured_parameter)
+        $._simple_formal_parameter,
+        alias($.parameters, $.destructured_parameter)
       ),
 
-    simple_formal_parameter_: $ =>
-      field(
-        'parameter',
-        choice(
-          $.identifier,
-          $.splat_parameter,
-          $.hash_splat_parameter,
-          $.block_parameter,
-          $.keyword_parameter,
-          $.optional_parameter
-        )
+    _simple_formal_parameter: $ =>
+      choice(
+        $.identifier,
+        $.splat_parameter,
+        $.hash_splat_parameter,
+        $.block_parameter,
+        $.keyword_parameter,
+        $.optional_parameter
       ),
 
-    splat_parameter: $ => seq('*', optional($.identifier)),
-    hash_splat_parameter: $ => seq('**', optional($.identifier)),
+    splat_parameter: $ => seq('*', field('name', optional($.identifier))),
+    hash_splat_parameter: $ => seq('**', field('name', optional($.identifier))),
     block_parameter: $ => seq('&', field('name', $.identifier)),
     keyword_parameter: $ =>
       prec.right(
@@ -209,40 +198,40 @@ module.exports = grammar({
         seq(
           field('name', $.identifier),
           token.immediate(':'),
-          field('value', optional($.arg))
+          field('value', optional($._arg))
         )
       ),
     optional_parameter: $ =>
       prec(
         PREC.BITWISE_OR + 1,
-        seq(field('name', $.identifier), '=', field('value', $.arg))
+        seq(field('name', $.identifier), '=', field('value', $._arg))
       ),
 
     class: $ =>
       seq(
         'class',
-        field('identifier', choice($.constant, $.scope_resolution)),
-        optional_with_placeholder('extends_optional', $.extends_optional),
-        $.terminator,
-        alias($.class_body_statement, $.body_statement)
+        field('name', choice($.constant, $.scope_resolution)),
+        field('superclass', optional($.superclass)),
+        $._terminator,
+        $._body_statement
       ),
 
-    extends_optional: $ => seq('<', alias($.expression_, $.extends_type)),
+    superclass: $ => seq('<', $._expression),
 
     singleton_class: $ =>
       seq(
         'class',
         alias($._singleton_class_left_angle_left_langle, '<<'),
-        field('value', $.arg),
+        field('value', $._arg),
         $._terminator,
-        $.body_statement
+        $._body_statement
       ),
 
     module: $ =>
       seq(
         'module',
         field('name', choice($.constant, $.scope_resolution)),
-        choice(seq($._terminator, $.body_statement), 'end')
+        choice(seq($._terminator, $._body_statement), 'end')
       ),
 
     return_command: $ =>
@@ -253,16 +242,7 @@ module.exports = grammar({
       prec.left(seq('break', alias($.command_argument_list, $.argument_list))),
     next_command: $ =>
       prec.left(seq('next', alias($.command_argument_list, $.argument_list))),
-    return: $ =>
-      prec.left(
-        seq(
-          'return',
-          optional_with_placeholder(
-            'return_value_optional',
-            alias($.argument_list, $.return_value)
-          )
-        )
-      ),
+    return: $ => prec.left(seq('return', optional($.argument_list))),
     yield: $ => prec.left(seq('yield', optional($.argument_list))),
     break: $ => prec.left(seq('break', optional($.argument_list))),
     next: $ => prec.left(seq('next', optional($.argument_list))),
@@ -272,16 +252,20 @@ module.exports = grammar({
     if_modifier: $ =>
       prec(
         PREC.RESCUE,
-        seq(field('body', $.statement), 'if', field('condition', $.expression_))
+        seq(
+          field('body', $._statement),
+          'if',
+          field('condition', $._expression)
+        )
       ),
 
     unless_modifier: $ =>
       prec(
         PREC.RESCUE,
         seq(
-          field('body', $.statement),
+          field('body', $._statement),
           'unless',
-          field('condition', $.expression_)
+          field('condition', $._expression)
         )
       ),
 
@@ -289,9 +273,9 @@ module.exports = grammar({
       prec(
         PREC.RESCUE,
         seq(
-          field('body', $.statement),
+          field('body', $._statement),
           'while',
-          field('condition', $.expression_)
+          field('condition', $._expression)
         )
       ),
 
@@ -299,9 +283,9 @@ module.exports = grammar({
       prec(
         PREC.RESCUE,
         seq(
-          field('body', $.statement),
+          field('body', $._statement),
           'until',
-          field('condition', $.expression_)
+          field('condition', $._expression)
         )
       ),
 
@@ -309,47 +293,36 @@ module.exports = grammar({
       prec(
         PREC.RESCUE,
         seq(
-          field('body', $.statement),
+          field('body', $._statement),
           'rescue',
-          field('handler', $.expression_)
+          field('handler', $._expression)
         )
       ),
 
-    while: $ => $.while_clause,
+    while: $ =>
+      seq('while', field('condition', $._statement), field('body', $.do)),
 
-    while_clause: $ =>
-      seq('while', alias($.statement, $.condition), field('body', $.do)),
+    until: $ =>
+      seq('until', field('condition', $._statement), field('body', $.do)),
 
-    until: $ => $.until_clause,
-
-    until_clause: $ =>
-      seq('until', alias($.statement, $.condition), field('body', $.do)),
-
-    for: $ => $.for_each_clause,
-
-    for_each_clause: $ =>
+    for: $ =>
       seq(
         'for',
-        field('block_iterator', choice($.lhs_, $.left_assignment_list)),
+        field('pattern', choice($._lhs, $.left_assignment_list)),
         field('value', $.in),
-        $.do
+        field('body', $.do)
       ),
 
-    in: $ => seq('in', alias($.arg, $.block_collection)),
-    do: $ =>
-      seq(
-        choice('do', $.terminator),
-        optional_with_placeholder('statement_list', $.statement_list),
-        'end'
-      ),
+    in: $ => seq('in', $._arg),
+    do: $ => seq(choice('do', $._terminator), optional($._statements), 'end'),
 
     case: $ =>
       seq(
         'case',
-        optional($.statement),
+        field('value', optional($._statement)),
         optional($._terminator),
         repeat($.when),
-        optional($.else_clause),
+        optional($.else),
         'end'
       ),
 
@@ -360,80 +333,40 @@ module.exports = grammar({
         choice($._terminator, field('body', $.then))
       ),
 
-    pattern: $ => choice($.arg, $.splat_argument),
+    pattern: $ => choice($._arg, $.splat_argument),
 
     if: $ =>
       seq(
-        $.if_clause,
-        optional_with_placeholder('else_if_clause_list', $.else_if_clause_list),
-        optional_with_placeholder('else_clause_optional', $.else_clause),
+        'if',
+        field('condition', $._statement),
+        choice($._terminator, field('consequence', $.then)),
+        field('alternative', optional(choice($.else, $.elsif))),
         'end'
       ),
-
-    else_if_clause: $ => seq('elsif', field('condition', $.statement), $.then),
-
-    else_if_clause_list: $ => repeat1($.else_if_clause),
-
-    if_clause: $ => seq('if', field('condition', $.statement), $.then),
 
     unless: $ =>
       seq(
         'unless',
-        field('condition', $.statement),
-        choice($._terminator, $.then),
-        optional(choice($.else_clause, $.else_if_clause)),
+        field('condition', $._statement),
+        choice($._terminator, field('consequence', $.then)),
+        field('alternative', optional(choice($.else, $.elsif))),
         'end'
       ),
 
-    else_clause_wrapper: $ =>
-      field('rescue_else_ensure_element', $.else_clause),
-
-    else_clause: $ =>
+    elsif: $ =>
       seq(
-        'else',
-        optional($.terminator),
-        optional_with_placeholder('statement_list', $.statement_list)
+        'elsif',
+        field('condition', $._statement),
+        choice($._terminator, field('consequence', $.then)),
+        field('alternative', optional(choice($.else, $.elsif)))
       ),
+
+    else: $ => seq('else', optional($._terminator), optional($._statements)),
 
     then: $ =>
       choice(
-        $.then_postfix,
-        seq(
-          $.terminator,
-          optional_with_placeholder('statement_list', $.statement_list)
-        )
-      ),
-
-    then_postfix: $ =>
-      seq(
-        optional($.terminator),
-        'then',
-        optional_with_placeholder('statement_list', $.statement_list)
-      ),
-
-    begin: $ =>
-      seq(
-        $.begin_clause,
-        optional_with_placeholder(
-          'rescue_clause_list',
-          repeat1($.rescue_clause_wrapper)
-        ),
-        optional_with_placeholder(
-          'else_clause_list',
-          repeat1($.else_clause_wrapper)
-        ),
-        optional_with_placeholder(
-          'ensure_clause_list',
-          repeat1($.ensure_clause_wrapper)
-        ),
-        'end'
-      ),
-
-    begin_clause: $ =>
-      seq(
-        'begin',
-        optional($.terminator),
-        optional_with_placeholder('statement_list', $.statement_list)
+        seq($._terminator, $._statements),
+        seq(optional($._terminator), 'then', optional($._statements))
       ),
 
     ensure_clause_wrapper: $ =>
@@ -445,32 +378,13 @@ module.exports = grammar({
         optional_with_placeholder('statement_list', $.statement_list)
       ),
 
-    rescue_clause_wrapper: $ =>
-      field('rescue_else_ensure_element', $.rescue_clause),
-
-    rescue_clause: $ =>
+    rescue: $ =>
       seq(
         'rescue',
-        optional_with_placeholder(
-          'rescue_parameter_optional',
-          $.rescue_parameter
-        ),
-        $.then
+        field('exceptions', optional($.exceptions)),
+        field('variable', optional($.exception_variable)),
+        choice($._terminator, field('body', $.then))
       ),
-
-    rescue_parameter: $ =>
-      choice(
-        $.exceptions,
-        $.exception_variable,
-        seq($.exceptions, $.exception_variable)
-      ),
-
-    exceptions: $ => commaSep1(choice($.arg, $.splat_argument)),
-
-    exception_variable: $ => seq('=>', $.lhs_),
-
-    rescue_else_ensure_element: $ =>
-      choice($.rescue_clause_wrapper, $.else_clause, $.ensure_clause_wrapper),
 
     body_statement: $ =>
       seq(
@@ -510,27 +424,11 @@ module.exports = grammar({
 
     class_member_list: $ => $.members,
 
-    members: $ =>
-      choice(
-        seq(
-          repeat1(choice(seq($.member, $._terminator), $.empty_statement)),
-          optional($.member)
-        ),
-        $.member
-      ),
-
-    member: $ =>
-      choice(
-        $.undef,
-        $.alias,
-        $.if_modifier,
-        $.unless_modifier,
-        $.while_modifier,
-        $.until_modifier,
-        $.rescue_modifier,
-        $.begin_block,
-        $.end_block,
-        $.expression_
+    _body_statement: $ =>
+      seq(
+        optional($._statements),
+        repeat(choice($.rescue, $.else, $.ensure)),
+        'end'
       ),
 
     // Method calls without parentheses (aka "command calls") are only allowed
@@ -548,25 +446,25 @@ module.exports = grammar({
     // contain command calls. The `_arg` rule can appear in many more places,
     // but cannot contain command calls (unless they are wrapped in parens).
     // This naming convention is based on Ruby's standard grammar.
-    expression_: $ =>
+    _expression: $ =>
       choice(
         alias($.command_binary, $.binary),
         alias($.command_unary, $.unary),
         alias($.command_assignment, $.assignment),
         alias($.command_operator_assignment, $.operator_assignment),
-        $.command_call,
-        $.command_call_with_block,
-        prec.left(alias($._chained_command_call, $.chained_command_call)),
+        alias($.command_call, $.call),
+        alias($.command_call_with_block, $.call),
+        prec.left(alias($._chained_command_call, $.call)),
         alias($.return_command, $.return),
         alias($.yield_command, $.yield),
         alias($.break_command, $.break),
         alias($.next_command, $.next),
-        $.arg
+        $._arg
       ),
 
-    arg: $ =>
+    _arg: $ =>
       choice(
-        $.primary,
+        $._primary,
         $.assignment,
         $.operator_assignment,
         $.conditional,
@@ -575,14 +473,14 @@ module.exports = grammar({
         $.unary
       ),
 
-    primary: $ =>
+    _primary: $ =>
       choice(
         $.parenthesized_statements,
-        $.lhs_,
-        $.list,
+        $._lhs,
+        $.array,
         $.string_array,
         $.symbol_array,
-        $.dictionary,
+        $.hash,
         $.subshell,
         $.simple_symbol,
         $.delimited_symbol,
@@ -613,20 +511,20 @@ module.exports = grammar({
         $.next,
         $.redo,
         $.retry,
-        $.parenthesized_unary,
-        $.unary_literal,
+        alias($.parenthesized_unary, $.unary),
+        alias($.unary_literal, $.unary),
         $.heredoc_beginning
       ),
 
-    parenthesized_statements: $ => seq('(', optional($.statements), ')'),
+    parenthesized_statements: $ => seq('(', optional($._statements), ')'),
 
     element_reference: $ =>
       prec.left(
         1,
         seq(
-          field('object', $.primary),
+          field('object', $._primary),
           alias($._element_reference_bracket, '['),
-          optional($.argument_list),
+          optional($._argument_list_with_trailing_comma),
           ']'
         )
       ),
@@ -635,19 +533,19 @@ module.exports = grammar({
       prec.left(
         1,
         seq(
-          choice('::', seq(field('scope', $.primary), token.immediate('::'))),
+          choice('::', seq(field('scope', $._primary), token.immediate('::'))),
           field('name', choice($.identifier, $.constant))
         )
       ),
 
-    call_expression_: $ =>
+    _call: $ =>
       prec.left(
         PREC.CALL,
         seq(
-          field('receiver', $.primary),
+          field('receiver', $._primary),
           choice('.', '&.'),
           field(
-            'method_identifier',
+            'method',
             choice($.identifier, $.operator, $.constant, $.argument_list)
           )
         )
@@ -656,9 +554,9 @@ module.exports = grammar({
     command_call: $ =>
       seq(
         choice(
-          $.call_expression_,
+          $._call,
           $._chained_command_call,
-          choice($._variable, $.scope_resolution) // identifier
+          field('method', choice($._variable, $.scope_resolution))
         ),
         field('arguments', alias($.command_argument_list, $.argument_list))
       ),
@@ -668,18 +566,15 @@ module.exports = grammar({
         $.call_expression_,
         field('method_identifier', choice($._variable, $.scope_resolution))
       )
-      const arguments = alias($.command_argument_list, $.argument_list)
-      const block = $.enclosed_body_
-      const doBlock = $.do_block
-      return seq(
-        receiver,
-        field(
-          'block',
-          choice(
-            prec(PREC.CURLY_BLOCK, seq(arguments, block)),
-            prec(PREC.DO_BLOCK, seq(arguments, doBlock))
-          )
-        )
+      const arguments = field(
+        'arguments',
+        alias($.command_argument_list, $.argument_list)
+      )
+      const block = field('block', $.block)
+      const doBlock = field('block', $.do_block)
+      return choice(
+        seq(receiver, prec(PREC.CURLY_BLOCK, seq(arguments, block))),
+        seq(receiver, prec(PREC.DO_BLOCK, seq(arguments, doBlock)))
       )
     },
 
@@ -688,15 +583,15 @@ module.exports = grammar({
         field('receiver', alias($.command_call_with_block, $.call)),
         choice('.', '&.'),
         field(
-          'method_identifier',
+          'method',
           choice($.identifier, $.operator, $.constant, $.argument_list)
         )
       ),
 
     call: $ => {
       const receiver = choice(
-        $.call_expression_,
-        field('method_identifier', choice($._variable, $.scope_resolution))
+        $._call,
+        field('method', choice($._variable, $.scope_resolution))
       )
       return choice(
         seq(receiver, $.arguments),
@@ -712,26 +607,22 @@ module.exports = grammar({
 
     command_argument_list: $ => prec.right(commaSep1($.argument)),
 
-    arguments: $ =>
+    argument_list: $ =>
       prec.right(
         seq(
           token.immediate('('),
-          optional_with_placeholder('argument_list', $.argument_list),
+          optional($._argument_list_with_trailing_comma),
           ')'
         )
       ),
 
-    argument_list: $ => prec.right(seq(commaSep1($.argument), optional(','))),
+    _argument_list_with_trailing_comma: $ =>
+      prec.right(seq(commaSep1($._argument), optional(','))),
 
-    inner_list: $ =>
-      prec.right(
-        seq(commaSep1(alias($.argument, $.list_element)), optional(','))
-      ),
-
-    argument: $ =>
+    _argument: $ =>
       prec.left(
         choice(
-          $.expression_,
+          $._expression,
           $.splat_argument,
           $.hash_splat_argument,
           $.block_argument,
@@ -739,9 +630,9 @@ module.exports = grammar({
         )
       ),
 
-    splat_argument: $ => seq(alias($._splat_star, '*'), $.arg),
-    hash_splat_argument: $ => seq(alias($._hash_splat_star_star, '**'), $.arg),
-    block_argument: $ => seq(alias($._block_ampersand, '&'), $.arg),
+    splat_argument: $ => seq(alias($._splat_star, '*'), $._arg),
+    hash_splat_argument: $ => seq(alias($._hash_splat_star_star, '**'), $._arg),
+    block_argument: $ => seq(alias($._block_ampersand, '&'), $._arg),
 
     do_block: $ =>
       seq(
@@ -750,19 +641,16 @@ module.exports = grammar({
         optional(
           seq(field('parameters', $.block_parameters), optional($._terminator))
         ),
-        $.body_statement
+        $._body_statement
       ),
 
-    enclosed_body_: $ =>
+    block: $ =>
       prec(
         PREC.CURLY_BLOCK,
         seq(
           '{',
-          optional($.block_parameters),
-          optional_with_placeholder(
-            'statement_list_',
-            alias($.statement_list, $.statement_list_)
-          ),
+          field('parameters', optional($.block_parameters)),
+          optional($._statements),
           '}'
         )
       ),
@@ -772,14 +660,11 @@ module.exports = grammar({
         PREC.ASSIGN,
         choice(
           seq(
-            field(
-              'assignment_variable',
-              choice($.lhs_, $.left_assignment_list)
-            ),
+            field('left', choice($._lhs, $.left_assignment_list)),
             '=',
             field(
-              'assignment_value',
-              choice($.arg, $.splat_argument, $.right_assignment_list)
+              'right',
+              choice($._arg, $.splat_argument, $.right_assignment_list)
             )
           )
         )
@@ -790,9 +675,9 @@ module.exports = grammar({
         PREC.ASSIGN,
         choice(
           seq(
-            field('left', choice($.lhs_, $.left_assignment_list)),
+            field('left', choice($._lhs, $.left_assignment_list)),
             '=',
-            field('right', $.expression_)
+            field('right', $._expression)
           )
         )
       ),
@@ -801,7 +686,7 @@ module.exports = grammar({
       prec.right(
         PREC.ASSIGN,
         seq(
-          field('left', $.lhs_),
+          field('left', $._lhs),
           field(
             'operator',
             choice(
@@ -820,7 +705,7 @@ module.exports = grammar({
               '^='
             )
           ),
-          field('right', $.arg)
+          field('right', $._arg)
         )
       ),
 
@@ -828,7 +713,7 @@ module.exports = grammar({
       prec.right(
         PREC.ASSIGN,
         seq(
-          field('left', $.lhs_),
+          field('left', $._lhs),
           field(
             'operator',
             choice(
@@ -847,7 +732,7 @@ module.exports = grammar({
               '^='
             )
           ),
-          field('right', $.expression_)
+          field('right', $._expression)
         )
       ),
 
@@ -855,17 +740,17 @@ module.exports = grammar({
       prec.right(
         PREC.CONDITIONAL,
         seq(
-          field('condition', $.arg),
+          field('condition', $._arg),
           '?',
-          field('consequence', $.arg),
+          field('consequence', $._arg),
           ':',
-          field('alternative', $.arg)
+          field('alternative', $._arg)
         )
       ),
 
     range: $ => {
-      const begin = field('begin_', $.arg)
-      const end = field('end', $.arg)
+      const begin = field('begin', $._arg)
+      const end = field('end', $._arg)
       const operator = field('operator', choice('..', '...'))
       return prec.right(
         PREC.RANGE,
@@ -901,19 +786,29 @@ module.exports = grammar({
         [prec.right, PREC.EXPONENTIAL, alias($._binary_star_star, '**')],
       ]
 
-      return choice(...operators.map(([fn, precedence, operator]) => fn(precedence, seq(
-        field('left', $._arg),
-        field('operator', operator), 
-        field('right', $._arg)
-      ))));
-    }, 
+      return choice(
+        ...operators.map(([fn, precedence, operator]) =>
+          fn(
+            precedence,
+            seq(
+              field('left', $._arg),
+              field('operator', operator),
+              field('right', $._arg)
+            )
+          )
+        )
+      )
+    },
 
-    command_binary: $ => prec.left(seq(
-      field('left', $._expression),
-      field('operator', choice('or', 'and')),
-      field('right', $._expression)
-    )),
- 
+    command_binary: $ =>
+      prec.left(
+        seq(
+          field('left', $._expression),
+          field('operator', choice('or', 'and')),
+          field('right', $._expression)
+        )
+      ),
+
     unary: $ => {
       const operators = [
         [prec, PREC.DEFINED, 'defined?'],
@@ -925,7 +820,7 @@ module.exports = grammar({
         ...operators.map(([fn, precedence, operator]) =>
           fn(
             precedence,
-            seq(field('operator', operator), field('operand', $.arg))
+            seq(field('operator', operator), field('operand', $._arg))
           )
         )
       )
@@ -942,7 +837,7 @@ module.exports = grammar({
         ...operators.map(([fn, precedence, operator]) =>
           fn(
             precedence,
-            seq(field('operator', operator), field('operand', $.expression_))
+            seq(field('operator', operator), field('operand', $._expression))
           )
         )
       )
@@ -967,7 +862,7 @@ module.exports = grammar({
       ),
 
     right_assignment_list: $ =>
-      prec(-1, commaSep1(choice($.arg, $.splat_argument))),
+      prec(-1, commaSep1(choice($._arg, $.splat_argument))),
 
     left_assignment_list: $ => $._mlhs,
     _mlhs: $ =>
@@ -975,25 +870,26 @@ module.exports = grammar({
         -1,
         seq(
           commaSep1(
-            choice($.lhs_, $.rest_assignment, $.destructured_left_assignment)
+            choice($._lhs, $.rest_assignment, $.destructured_left_assignment)
           ),
           optional(',')
         )
       ),
     destructured_left_assignment: $ => prec(-1, seq('(', $._mlhs, ')')),
 
-    rest_assignment: $ => prec(-1, seq('*', optional($.lhs_))),
+    rest_assignment: $ => prec(-1, seq('*', optional($._lhs))),
 
-    lhs_: $ =>
+    _lhs: $ =>
       prec.left(
         choice(
           $._variable,
           $.true,
           $.false,
-          $.nil_,
+          $.nil,
           $.scope_resolution,
           $.element_reference,
-          field('call', choice($.call_expression_, $.call))
+          alias($._call, $.call),
+          $.call
         )
       ),
 
@@ -1103,7 +999,7 @@ module.exports = grammar({
 
     character: $ => /\?(\\\S({[0-9A-Fa-f]*}|[0-9A-Fa-f]*|-\S([MC]-\S)?)?|\S)/,
 
-    interpolation: $ => seq('#{', optional($.statements), '}'),
+    interpolation: $ => seq('#{', optional($._statements), '}'),
 
     string: $ =>
       seq(
@@ -1176,10 +1072,9 @@ module.exports = grammar({
         )
       ),
 
-    list: $ =>
-      seq('[', optional_with_placeholder('inner_list', $.inner_list), ']'),
+    array: $ => seq('[', optional($._argument_list_with_trailing_comma), ']'),
 
-    dictionary: $ =>
+    hash: $ =>
       seq(
         '{',
         optional(
@@ -1188,40 +1083,42 @@ module.exports = grammar({
         '}'
       ),
 
-    arrow_pair: $ => seq(field('key', $.arg), '=>', field('value', $.arg)),
-
     pair: $ =>
       choice(
-        $.arrow_pair,
+        seq(field('key', $._arg), '=>', field('value', $._arg)),
         seq(
           field(
             'key',
             choice(
               $.hash_key_symbol,
-              $.hash_key_symbol,
-              $.hash_key_symbol,
+              alias($.identifier, $.hash_key_symbol),
+              alias($.constant, $.hash_key_symbol),
               $.string
             )
           ),
           token.immediate(':'),
-          field('value', $.arg)
+          field('value', $._arg)
         )
       ),
 
     lambda: $ =>
       seq(
         '->',
-        choice(
-          alias($.parameter_list_block, $.lambda_parameters),
-          optional_with_placeholder('paremeter_list', $.bare_parameters)
+        field(
+          'parameters',
+          optional(
+            choice(
+              alias($.parameters, $.lambda_parameters),
+              alias($.bare_parameters, $.lambda_parameters)
+            )
+          )
         ),
-        choice($.enclosed_body_, $.do_block)
+        field('body', choice($.block, $.do_block))
       ),
 
     empty_statement: $ => prec(-1, ';'),
 
     _terminator: $ => choice($._line_break, ';'),
-    terminator: $ => $._terminator,
   },
 })
 
@@ -1239,8 +1136,4 @@ function commaSep1(rule) {
 
 function commaSep(rule) {
   return optional(commaSep1(rule))
-}
-
-function optional_with_placeholder(field_name, rule) {
-  return choice(field(field_name, rule), field(field_name, blank()))
 }

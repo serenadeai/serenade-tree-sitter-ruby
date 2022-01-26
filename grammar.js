@@ -71,21 +71,14 @@ module.exports = grammar({
 
   word: $ => $.identifier,
 
-  conflicts: $ => [
-    [$.unless, $.terminator],
-    [$.when, $.terminator],
-    [$.expression_, $.pair],
-    [$.expression_, $._chained_command_call],
-    [$.command_argument_list, $.argument_list],
-    [$.primary, $.chained_string],
-    [$.chained_string],
-    [$._chained_command_call, $._variable],
-    [$.begin, $.primary],
-    [$.member, $.statement],
-    [$.arrow_pair, $.expression_],
+  supertypes: $ => [
+    $._statement,
+    $._arg,
+    $._method_name,
+    $._variable,
+    $._primary,
+    $._lhs,
   ],
-
-  supertypes: $ => [$._method_name, $._variable],
 
   rules: {
     program: $ =>
@@ -122,12 +115,7 @@ module.exports = grammar({
         $._expression
       ),
 
-    singleton_method: $ =>
-      seq(
-        'def',
-        seq(choice($._variable, seq('(', $.arg, ')')), choice('.', '::')),
-        $.method_rest
-      ),
+    method: $ => seq('def', $._method_rest),
 
     singleton_method: $ =>
       seq(
@@ -369,14 +357,9 @@ module.exports = grammar({
         seq(optional($._terminator), 'then', optional($._statements))
       ),
 
-    ensure_clause_wrapper: $ =>
-      field('rescue_else_ensure_element', $.ensure_clause),
+    begin: $ => seq('begin', optional($._terminator), $._body_statement),
 
-    ensure_clause: $ =>
-      seq(
-        'ensure',
-        optional_with_placeholder('statement_list', $.statement_list)
-      ),
+    ensure: $ => seq('ensure', optional($._statements)),
 
     rescue: $ =>
       seq(
@@ -386,43 +369,9 @@ module.exports = grammar({
         choice($._terminator, field('body', $.then))
       ),
 
-    body_statement: $ =>
-      seq(
-        optional_with_placeholder('statement_list', $.statement_list),
-        optional_with_placeholder(
-          'rescue_clause_list',
-          repeat1($.rescue_clause_wrapper)
-        ),
-        optional_with_placeholder(
-          'else_clause_list',
-          repeat1($.else_clause_wrapper)
-        ),
-        optional_with_placeholder(
-          'ensure_clause_list',
-          repeat1($.ensure_clause_wrapper)
-        ),
-        'end'
-      ),
+    exceptions: $ => commaSep1(choice($._arg, $.splat_argument)),
 
-    class_body_statement: $ =>
-      seq(
-        optional_with_placeholder('class_member_list', $.class_member_list),
-        optional_with_placeholder(
-          'rescue_clause_list',
-          repeat1($.rescue_clause_wrapper)
-        ),
-        optional_with_placeholder(
-          'else_clause_list',
-          repeat1($.else_clause_wrapper)
-        ),
-        optional_with_placeholder(
-          'ensure_clause_list',
-          repeat1($.ensure_clause_wrapper)
-        ),
-        'end'
-      ),
-
-    class_member_list: $ => $.members,
+    exception_variable: $ => seq('=>', $._lhs),
 
     _body_statement: $ =>
       seq(
@@ -563,8 +512,8 @@ module.exports = grammar({
 
     command_call_with_block: $ => {
       const receiver = choice(
-        $.call_expression_,
-        field('method_identifier', choice($._variable, $.scope_resolution))
+        $._call,
+        field('method', choice($._variable, $.scope_resolution))
       )
       const arguments = field(
         'arguments',
@@ -593,19 +542,19 @@ module.exports = grammar({
         $._call,
         field('method', choice($._variable, $.scope_resolution))
       )
+      const arguments = field('arguments', $.argument_list)
+      const block = field('block', $.block)
+      const doBlock = field('block', $.do_block)
       return choice(
-        seq(receiver, $.arguments),
-        seq(
-          receiver,
-          prec(PREC.CURLY_BLOCK, seq($.arguments, $.enclosed_body_))
-        ),
-        seq(receiver, prec(PREC.DO_BLOCK, seq($.arguments, $.do_block))),
-        prec(PREC.CURLY_BLOCK, seq(receiver, $.enclosed_body_)),
-        prec(PREC.DO_BLOCK, seq(receiver, $.do_block))
+        seq(receiver, arguments),
+        seq(receiver, prec(PREC.CURLY_BLOCK, seq(arguments, block))),
+        seq(receiver, prec(PREC.DO_BLOCK, seq(arguments, doBlock))),
+        prec(PREC.CURLY_BLOCK, seq(receiver, block)),
+        prec(PREC.DO_BLOCK, seq(receiver, doBlock))
       )
     },
 
-    command_argument_list: $ => prec.right(commaSep1($.argument)),
+    command_argument_list: $ => prec.right(commaSep1($._argument)),
 
     argument_list: $ =>
       prec.right(
@@ -985,7 +934,7 @@ module.exports = grammar({
     self: $ => 'self',
     true: $ => token(choice('true', 'TRUE')),
     false: $ => token(choice('false', 'FALSE')),
-    nil_: $ => token(choice('nil', 'NIL')),
+    nil: $ => token(choice('nil', 'NIL')),
 
     constant: $ => token(seq(/[A-Z]/, IDENTIFIER_CHARS, /(\?|\!)?/)),
     identifier: $ => token(seq(LOWER_ALPHA_CHAR, IDENTIFIER_CHARS, /(\?|\!)?/)),
@@ -1136,4 +1085,8 @@ function commaSep1(rule) {
 
 function commaSep(rule) {
   return optional(commaSep1(rule))
+}
+
+function optional_with_placeholder(field_name, rule) {
+  return choice(field(field_name, rule), field(field_name, blank()))
 }

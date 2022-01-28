@@ -615,17 +615,28 @@
   {
     "type": "block_parameters",
     "named": true,
-    "fields": {},
+    "fields": {
+      "parameter_list": {
+        "multiple": true,
+        "required": false,
+        "types": [
+          {
+            "type": ",",
+            "named": false
+          },
+          {
+            "type": "parameter",
+            "named": true
+          }
+        ]
+      }
+    },
     "children": {
       "multiple": true,
       "required": false,
       "types": [
         {
           "type": "identifier",
-          "named": true
-        },
-        {
-          "type": "parameter",
           "named": true
         }
       ]

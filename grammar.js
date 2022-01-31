@@ -155,13 +155,13 @@ module.exports = grammar({
 
     block_parameters: $ =>
       seq(
-      '|',
-      seq(
-        optional_with_placeholder('parameter_list', commaSep($.parameter)),
-        optional(','),
-        optional(seq(';', sep1($.identifier, ','))) // Block shadow args e.g. {|; a, b| ...}
+        '|',
+        seq(
+          optional_with_placeholder('parameter_list', commaSep($.parameter)),
+          optional(','),
+          optional(seq(';', sep1($.identifier, ','))) // Block shadow args e.g. {|; a, b| ...}
         ),
-      '|'
+        '|'
       ),
 
     parameter: $ =>
@@ -224,7 +224,7 @@ module.exports = grammar({
     module: $ =>
       seq(
         'module',
-        field('name', choice($.constant, $.scope_resolution)),
+        field('identifier', choice($.constant, $.scope_resolution)),
         choice(seq($.terminator_, $.body_statement), 'end')
       ),
 
@@ -1198,24 +1198,31 @@ module.exports = grammar({
     dictionary: $ =>
       seq(
         '{',
-        optional(
-          seq(commaSep1(choice($.pair, $.hash_splat_argument)), optional(','))
-        ),
+        optional_with_placeholder('key_value_pair_list', $.key_value_pair_list),
         '}'
       ),
 
-    arrow_pair: $ => seq(field('key', $.arg), '=>', field('value', $.arg)),
+    key_value_pair_list: $ => seq(commaSep1($.key_value_pair), optional(',')),
+
+    key_value_pair: $ => choice($.pair, $.hash_splat_argument),
+
+    arrow_pair: $ =>
+      seq(
+        field('key_value_pair_key', $.arg),
+        '=>',
+        field('key_value_pair_value', $.arg)
+      ),
 
     pair: $ =>
       choice(
         $.arrow_pair,
         seq(
           field(
-            'key',
+            'key_value_pair_key',
             choice($.hash_key_symbol, $.identifier, $.constant, $.string)
           ),
           token.immediate(':'),
-          field('value', $.arg)
+          field('key_value_pair_value', $.arg)
         )
       ),
 

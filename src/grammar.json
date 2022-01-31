@@ -886,7 +886,7 @@
         },
         {
           "type": "FIELD",
-          "name": "name",
+          "name": "identifier",
           "content": {
             "type": "CHOICE",
             "members": [
@@ -5924,7 +5924,7 @@
           },
           {
             "type": "PATTERN",
-            "value": "[^\\x00-\\x1F\\s:;`\"'@$#.,|^&<=>+\\-*\\/\\\\%?!~()\\[\\]{}]*"
+            "value": "[^\\x00-\\x1F\\s:;`\"'@$#.,|^&<=>+\\-*/\\\\%?!~()\\[\\]{}]*"
           },
           {
             "type": "PATTERN",
@@ -5940,11 +5940,11 @@
         "members": [
           {
             "type": "PATTERN",
-            "value": "[^\\x00-\\x1F\\sA-Z0-9:;`\"'@$#.,|^&<=>+\\-*\\/\\\\%?!~()\\[\\]{}]"
+            "value": "[^\\x00-\\x1F\\sA-Z0-9:;`\"'@$#.,|^&<=>+\\-*/\\\\%?!~()\\[\\]{}]"
           },
           {
             "type": "PATTERN",
-            "value": "[^\\x00-\\x1F\\s:;`\"'@$#.,|^&<=>+\\-*\\/\\\\%?!~()\\[\\]{}]*"
+            "value": "[^\\x00-\\x1F\\s:;`\"'@$#.,|^&<=>+\\-*/\\\\%?!~()\\[\\]{}]*"
           },
           {
             "type": "PATTERN",
@@ -5964,11 +5964,11 @@
           },
           {
             "type": "PATTERN",
-            "value": "[^\\x00-\\x1F\\s0-9:;`\"'@$#.,|^&<=>+\\-*\\/\\\\%?!~()\\[\\]{}]"
+            "value": "[^\\x00-\\x1F\\s0-9:;`\"'@$#.,|^&<=>+\\-*/\\\\%?!~()\\[\\]{}]"
           },
           {
             "type": "PATTERN",
-            "value": "[^\\x00-\\x1F\\s:;`\"'@$#.,|^&<=>+\\-*\\/\\\\%?!~()\\[\\]{}]*"
+            "value": "[^\\x00-\\x1F\\s:;`\"'@$#.,|^&<=>+\\-*/\\\\%?!~()\\[\\]{}]*"
           }
         ]
       }
@@ -5984,18 +5984,18 @@
           },
           {
             "type": "PATTERN",
-            "value": "[^\\x00-\\x1F\\s0-9:;`\"'@$#.,|^&<=>+\\-*\\/\\\\%?!~()\\[\\]{}]"
+            "value": "[^\\x00-\\x1F\\s0-9:;`\"'@$#.,|^&<=>+\\-*/\\\\%?!~()\\[\\]{}]"
           },
           {
             "type": "PATTERN",
-            "value": "[^\\x00-\\x1F\\s:;`\"'@$#.,|^&<=>+\\-*\\/\\\\%?!~()\\[\\]{}]*"
+            "value": "[^\\x00-\\x1F\\s:;`\"'@$#.,|^&<=>+\\-*/\\\\%?!~()\\[\\]{}]*"
           }
         ]
       }
     },
     "global_variable": {
       "type": "PATTERN",
-      "value": "\\$-?(([!@&`'+~=\\/\\\\,;.<>*$?:\"])|([0-9]*)|([a-zA-Z_][a-zA-Z0-9_]*))"
+      "value": "\\$-?(([!@&`'+~=/\\\\,;.<>*$?:\"])|([0-9]*)|([a-zA-Z_][a-zA-Z0-9_]*))"
     },
     "chained_string": {
       "type": "SEQ",
@@ -6544,67 +6544,19 @@
           "type": "CHOICE",
           "members": [
             {
-              "type": "SEQ",
-              "members": [
-                {
-                  "type": "SEQ",
-                  "members": [
-                    {
-                      "type": "CHOICE",
-                      "members": [
-                        {
-                          "type": "SYMBOL",
-                          "name": "pair"
-                        },
-                        {
-                          "type": "SYMBOL",
-                          "name": "hash_splat_argument"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "REPEAT",
-                      "content": {
-                        "type": "SEQ",
-                        "members": [
-                          {
-                            "type": "STRING",
-                            "value": ","
-                          },
-                          {
-                            "type": "CHOICE",
-                            "members": [
-                              {
-                                "type": "SYMBOL",
-                                "name": "pair"
-                              },
-                              {
-                                "type": "SYMBOL",
-                                "name": "hash_splat_argument"
-                              }
-                            ]
-                          }
-                        ]
-                      }
-                    }
-                  ]
-                },
-                {
-                  "type": "CHOICE",
-                  "members": [
-                    {
-                      "type": "STRING",
-                      "value": ","
-                    },
-                    {
-                      "type": "BLANK"
-                    }
-                  ]
-                }
-              ]
+              "type": "FIELD",
+              "name": "key_value_pair_list",
+              "content": {
+                "type": "SYMBOL",
+                "name": "key_value_pair_list"
+              }
             },
             {
-              "type": "BLANK"
+              "type": "FIELD",
+              "name": "key_value_pair_list",
+              "content": {
+                "type": "BLANK"
+              }
             }
           ]
         },
@@ -6614,12 +6566,67 @@
         }
       ]
     },
+    "key_value_pair_list": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "SYMBOL",
+              "name": "key_value_pair"
+            },
+            {
+              "type": "REPEAT",
+              "content": {
+                "type": "SEQ",
+                "members": [
+                  {
+                    "type": "STRING",
+                    "value": ","
+                  },
+                  {
+                    "type": "SYMBOL",
+                    "name": "key_value_pair"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "STRING",
+              "value": ","
+            },
+            {
+              "type": "BLANK"
+            }
+          ]
+        }
+      ]
+    },
+    "key_value_pair": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "pair"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "hash_splat_argument"
+        }
+      ]
+    },
     "arrow_pair": {
       "type": "SEQ",
       "members": [
         {
           "type": "FIELD",
-          "name": "key",
+          "name": "key_value_pair_key",
           "content": {
             "type": "SYMBOL",
             "name": "arg"
@@ -6631,7 +6638,7 @@
         },
         {
           "type": "FIELD",
-          "name": "value",
+          "name": "key_value_pair_value",
           "content": {
             "type": "SYMBOL",
             "name": "arg"
@@ -6651,7 +6658,7 @@
           "members": [
             {
               "type": "FIELD",
-              "name": "key",
+              "name": "key_value_pair_key",
               "content": {
                 "type": "CHOICE",
                 "members": [
@@ -6683,7 +6690,7 @@
             },
             {
               "type": "FIELD",
-              "name": "value",
+              "name": "key_value_pair_value",
               "content": {
                 "type": "SYMBOL",
                 "name": "arg"

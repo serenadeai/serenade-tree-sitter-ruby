@@ -28,8 +28,7 @@ const PREC = {
 }
 
 const IDENTIFIER_CHARS = /[^\x00-\x1F\s:;`"'@$#.,|^&<=>+\-*/\\%?!~()\[\]{}]*/
-const LOWER_ALPHA_CHAR =
-  /[^\x00-\x1F\sA-Z0-9:;`"'@$#.,|^&<=>+\-*/\\%?!~()\[\]{}]/
+const LOWER_ALPHA_CHAR = /[^\x00-\x1F\sA-Z0-9:;`"'@$#.,|^&<=>+\-*/\\%?!~()\[\]{}]/
 const ALPHA_CHAR = /[^\x00-\x1F\s0-9:;`"'@$#.,|^&<=>+\-*/\\%?!~()\[\]{}]/
 
 module.exports = grammar({
@@ -66,6 +65,8 @@ module.exports = grammar({
     $._binary_star_star,
     $._element_reference_bracket,
   ],
+
+  conflicts: $ => [[$.call]],
 
   extras: $ => [$.comment, $.heredoc_body, /\s|\\\n/],
 
@@ -153,7 +154,7 @@ module.exports = grammar({
     bare_parameters: $ =>
       seq($.simple_formal_parameter_, repeat(seq(',', $.parameter))),
 
-    block_parameters: $ =>
+    block_parameter_list_optional: $ =>
       seq(
         '|',
         seq(
@@ -712,9 +713,17 @@ module.exports = grammar({
       const block = $.enclosed_body_
       const doBlock = $.do_block
       return choice(
-        seq(receiver, arguments),
         seq(receiver, prec(PREC.CURLY_BLOCK, seq(arguments, block))),
-        seq(receiver, prec(PREC.DO_BLOCK, seq(arguments, doBlock))),
+        seq(
+          receiver,
+          prec(
+            PREC.DO_BLOCK,
+            seq(
+              arguments,
+              optional_with_placeholder('do_block_optional', doBlock)
+            )
+          )
+        ),
         prec(PREC.CURLY_BLOCK, seq(receiver, block)),
         prec(PREC.DO_BLOCK, seq(receiver, doBlock))
       )
@@ -752,8 +761,12 @@ module.exports = grammar({
       seq(
         'do',
         optional($.terminator_),
-        optional(
-          seq(field('parameters', $.block_parameters), optional($.terminator_))
+        seq(
+          optional_with_placeholder(
+            'block_parameter_list_optional',
+            $.block_parameter_list_optional
+          ),
+          optional($.terminator_)
         ),
         $.body_statement
       ),
@@ -763,7 +776,7 @@ module.exports = grammar({
         PREC.CURLY_BLOCK,
         seq(
           '{',
-          field('parameters', optional($.block_parameters)),
+          field('parameters', optional($.block_parameter_list_optional)),
           optional_with_placeholder('statement_list', $.statement_list),
           '}'
         )

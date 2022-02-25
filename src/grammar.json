@@ -3851,18 +3851,6 @@
           "type": "CHOICE",
           "members": [
             {
-              "type": "SYMBOL",
-              "name": "terminator_"
-            },
-            {
-              "type": "BLANK"
-            }
-          ]
-        },
-        {
-          "type": "CHOICE",
-          "members": [
-            {
               "type": "FIELD",
               "name": "block_parameter_list_optional",
               "content": {
@@ -3876,6 +3864,18 @@
               "content": {
                 "type": "BLANK"
               }
+            }
+          ]
+        },
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "SYMBOL",
+              "name": "terminator_"
+            },
+            {
+              "type": "BLANK"
             }
           ]
         },

@@ -760,11 +760,11 @@ module.exports = grammar({
     do_block: $ =>
       seq(
         'do',
-        optional($.terminator_),
         optional_with_placeholder(
           'block_parameter_list_optional',
           $.block_parameter_list_optional
         ),
+        optional($.terminator_),
         $.body_statement
       ),
 

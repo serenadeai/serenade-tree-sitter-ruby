@@ -765,7 +765,6 @@ module.exports = grammar({
           'block_parameter_list_optional',
           $.block_parameter_list_optional
         ),
-        optional($.terminator_),
         $.body_statement
       ),
 

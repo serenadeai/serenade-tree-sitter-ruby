@@ -761,13 +761,11 @@ module.exports = grammar({
       seq(
         'do',
         optional($.terminator_),
-        seq(
-          optional_with_placeholder(
-            'block_parameter_list_optional',
-            $.block_parameter_list_optional
-          ),
-          optional($.terminator_)
+        optional_with_placeholder(
+          'block_parameter_list_optional',
+          $.block_parameter_list_optional
         ),
+        optional($.terminator_),
         $.body_statement
       ),
 

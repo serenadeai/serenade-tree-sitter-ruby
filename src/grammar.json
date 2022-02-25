@@ -3860,39 +3860,34 @@
           ]
         },
         {
-          "type": "SEQ",
+          "type": "CHOICE",
           "members": [
             {
-              "type": "CHOICE",
-              "members": [
-                {
-                  "type": "FIELD",
-                  "name": "block_parameter_list_optional",
-                  "content": {
-                    "type": "SYMBOL",
-                    "name": "block_parameter_list_optional"
-                  }
-                },
-                {
-                  "type": "FIELD",
-                  "name": "block_parameter_list_optional",
-                  "content": {
-                    "type": "BLANK"
-                  }
-                }
-              ]
+              "type": "FIELD",
+              "name": "block_parameter_list_optional",
+              "content": {
+                "type": "SYMBOL",
+                "name": "block_parameter_list_optional"
+              }
             },
             {
-              "type": "CHOICE",
-              "members": [
-                {
-                  "type": "SYMBOL",
-                  "name": "terminator_"
-                },
-                {
-                  "type": "BLANK"
-                }
-              ]
+              "type": "FIELD",
+              "name": "block_parameter_list_optional",
+              "content": {
+                "type": "BLANK"
+              }
+            }
+          ]
+        },
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "SYMBOL",
+              "name": "terminator_"
+            },
+            {
+              "type": "BLANK"
             }
           ]
         },
